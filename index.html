@@ -1,0 +1,2508 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1"/>
+<meta name="theme-color" content="#0B1024"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="수양회"/>
+<link rel="manifest" href="manifest.json"/>
+<link rel="icon" type="image/jpeg" href="icon-192.jpg"/>
+<link rel="apple-touch-icon" href="icon-192.jpg"/>
+<title>하계수양회 등록 관리</title>
+
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin/>
+<link rel="preconnect" href="https://cdn.sheetjs.com" crossorigin/>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css"/>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
+
+<style>
+/* ============ 디자인 토큰 ============ */
+:root {
+  --bg-0: #0B1024; --bg-1: #131A38; --bg-2: #1B244C; --bg-3: #232E5E;
+  --line: #2A356A; --line-soft: #1F2850;
+  --ink: #ECEEFA; --ink-soft: #B6BEDC; --ink-mute: #7A85AE;
+  --gold: #FFC857; --gold-soft: #FFD988; --gold-deep: #E8A33D;
+  --indigo: #6C7AE0; --indigo-soft: #97A2EE; --green: #6EE7B7; --rose: #F87171;
+  --shadow: 0 10px 30px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.25);
+  --safe-top: env(safe-area-inset-top, 0); --safe-bot: env(safe-area-inset-bottom, 0);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg-0); color: var(--ink); }
+body {
+  font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  font-size: 15px; line-height: 1.5; font-feature-settings: 'tnum';
+  -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none;
+  min-height: 100vh; min-height: 100dvh;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { background: none; border: none; cursor: pointer; padding: 0; }
+input, select, textarea {
+  background: var(--bg-1); border: 1px solid var(--line); color: var(--ink);
+  border-radius: 10px; padding: 10px 12px; width: 100%;
+  transition: border-color .15s, background .15s;
+}
+input[type="checkbox"] { appearance: auto; width: auto; padding: 0; margin: 0; accent-color: var(--gold); }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--gold); background: var(--bg-2); }
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%23B6BEDC' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center; padding-right: 30px;
+}
+::placeholder { color: var(--ink-mute); }
+
+/* ============ 레이아웃 ============ */
+#app { padding-bottom: calc(72px + var(--safe-bot)); }
+
+header.topbar {
+  position: sticky; top: 0; z-index: 50; padding: calc(10px + var(--safe-top)) 16px 10px;
+  background: linear-gradient(180deg, rgba(11,16,36,.95), rgba(11,16,36,.85));
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line-soft); display: flex; align-items: center; gap: 10px;
+}
+.topbar .brand { display: flex; align-items: center; gap: 10px; flex: 1; }
+.brand .badge {
+  width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, var(--gold-soft), var(--gold-deep));
+  display: grid; place-items: center; box-shadow: var(--shadow);
+}
+.brand .badge svg { width: 18px; height: 18px; }
+.brand h1 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -.02em; }
+.brand .sub { color: var(--ink-mute); font-size: 11px; margin-top: 1px; }
+.topbar .iconbtn {
+  width: 38px; height: 38px; border-radius: 10px; background: var(--bg-1); border: 1px solid var(--line);
+  display: grid; place-items: center; color: var(--rose);
+}
+.topbar .iconbtn:active { background: var(--bg-2); }
+
+main.content { padding: 16px; max-width: 760px; margin: 0 auto; }
+
+nav.tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; padding: 8px 8px calc(8px + var(--safe-bot));
+  background: rgba(11,16,36,.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line-soft); 
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; 
+}
+.tabbar button {
+  display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 0; border-radius: 10px;
+  color: var(--ink-mute); font-size: 11px; font-weight: 500; transition: color .15s;
+}
+.tabbar button.active { color: var(--gold); }
+.tabbar button:active { background: var(--bg-1); }
+.tabbar svg { width: 22px; height: 22px; }
+
+/* ============ 공통 컴포넌트 ============ */
+.card { background: var(--bg-1); border: 1px solid var(--line-soft); border-radius: 16px; padding: 16px; margin-bottom: 12px; }
+.card .card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.card .card-title { font-size: 13px; font-weight: 600; color: var(--ink-soft); letter-spacing: -.01em; }
+.card .card-action { color: var(--gold); font-size: 13px; font-weight: 500; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 11px 16px; border-radius: 11px; font-weight: 600; font-size: 14px; transition: transform .08s, background .15s; }
+.btn:active { transform: scale(.97); }
+.btn-primary { background: linear-gradient(180deg, var(--gold-soft), var(--gold)); color: #2A1F0A; box-shadow: 0 4px 12px rgba(255,200,87,.25); }
+.btn-secondary { background: var(--bg-2); color: var(--ink); border: 1px solid var(--line); }
+.btn-ghost { color: var(--ink-soft); }
+.btn-danger { background: rgba(248,113,113,.12); color: var(--rose); border: 1px solid rgba(248,113,113,.3); }
+.btn-block { width: 100%; }
+
+.chip { display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 999px; background: var(--bg-2); border: 1px solid var(--line); font-size: 12px; color: var(--ink-soft); }
+.chip.gold { background: rgba(255,200,87,.12); border-color: rgba(255,200,87,.3); color: var(--gold-soft); }
+.chip.green { background: rgba(110,231,183,.1); border-color: rgba(110,231,183,.3); color: var(--green); }
+.chip.indigo { background: rgba(108,122,224,.12); border-color: rgba(108,122,224,.3); color: var(--indigo-soft); }
+
+.field { margin-bottom: 12px; }
+.field label { display: block; font-size: 12px; color: var(--ink-soft); margin-bottom: 6px; font-weight: 500; }
+.row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.clickable { cursor: pointer; transition: background .15s; }
+.clickable:active { background: var(--bg-3) !important; }
+
+/* ============ 홈 대시보드 ============ */
+.hero { background: linear-gradient(135deg, var(--bg-2) 0%, var(--bg-1) 100%); border: 1px solid var(--line-soft); border-radius: 20px; padding: 18px; margin-bottom: 14px; position: relative; overflow: hidden; }
+.hero::before { content: ''; position: absolute; right: -30px; top: -30px; width: 140px; height: 140px; background: radial-gradient(circle, rgba(255,200,87,.18), transparent 70%); pointer-events: none; }
+.hero .title { font-size: 13px; color: var(--ink-mute); margin-bottom: 4px; }
+.hero .big { font-size: 36px; font-weight: 800; letter-spacing: -.03em; color: var(--ink); }
+.hero .big .unit { font-size: 16px; font-weight: 500; color: var(--ink-mute); margin-left: 4px; }
+.hero .sub { display: flex; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
+.hero .sub-item { color: var(--ink-soft); font-size: 13px; }
+.hero .sub-item b { color: var(--gold); font-weight: 700; }
+
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.stat-cell { background: var(--bg-1); border: 1px solid var(--line-soft); border-radius: 14px; padding: 14px; }
+.stat-cell .label { font-size: 11px; color: var(--ink-mute); }
+.stat-cell .value { font-size: 22px; font-weight: 700; margin-top: 4px; letter-spacing: -.02em; }
+
+.bar-row { display: grid; grid-template-columns: 64px 1fr 40px; align-items: center; gap: 10px; padding: 6px 0; }
+.bar-row .name { font-size: 13px; color: var(--ink-soft); }
+.bar-row .bar { height: 8px; background: var(--bg-2); border-radius: 4px; overflow: hidden; }
+.bar-row .bar > div { height: 100%; background: linear-gradient(90deg, var(--gold-soft), var(--gold)); border-radius: 4px; transition: width .3s; }
+.bar-row .count { font-size: 13px; font-weight: 600; text-align: right; color: var(--ink); }
+/* 차편 분포 상행/하행 좌우 배치 */
+.dist-dual { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.dist-col-title { font-size: 12px; font-weight: 700; color: var(--gold); margin-bottom: 4px; letter-spacing: -.01em; }
+.dist-col .bar-row { grid-template-columns: 56px 1fr 32px; gap: 8px; padding: 4px 0; }
+.dist-col .bar-row .name { font-size: 12px; }
+.dist-col .bar-row .count { font-size: 12px; }
+.dist-col .bar-row .bar { height: 7px; }
+@media (max-width: 480px) {
+  .dist-dual { gap: 10px; }
+  .dist-col .bar-row { grid-template-columns: 48px 1fr 28px; gap: 6px; }
+  .dist-col .bar-row .name { font-size: 11px; }
+}
+
+/* ============ 명단(구역) ============ */
+.zone-scroll { display: flex; gap: 6px; overflow-x: auto; padding: 0 0 8px; margin: 0 -16px 12px; padding-left: 16px; padding-right: 16px; scrollbar-width: none; }
+.zone-scroll::-webkit-scrollbar { display: none; }
+.zone-scroll::after { content: ''; flex: 0 0 8px; }
+.zone-pill { flex-shrink: 0; padding: 8px 14px; border-radius: 999px; background: var(--bg-1); border: 1px solid var(--line); color: var(--ink-soft); font-size: 13px; font-weight: 500; white-space: nowrap; }
+.zone-pill.active { background: linear-gradient(180deg, var(--gold-soft), var(--gold)); color: #2A1F0A; border-color: transparent; font-weight: 700; }
+.zone-pill .ct { margin-left: 5px; opacity: .7; font-size: 11px; }
+
+.member-list { display: flex; flex-direction: column; gap: 8px; }
+.member-item { background: var(--bg-1); border: 1px solid var(--line-soft); border-radius: 12px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; }
+.member-item:active { background: var(--bg-2); }
+.member-item .no { flex-shrink: 0; width: 24px; height: 24px; border-radius: 7px; background: var(--bg-2); color: var(--ink-mute); display: grid; place-items: center; font-size: 11px; font-weight: 600; }
+.member-item .info { flex: 1; min-width: 0; }
+.member-item .name { font-weight: 600; font-size: 15px; letter-spacing: -.01em; }
+.member-item .meta { font-size: 12px; color: var(--ink-mute); margin-top: 2px; display: flex; gap: 6px; flex-wrap: wrap; }
+.empty-state { text-align: center; padding: 40px 20px; color: var(--ink-mute); }
+
+.fab { position: fixed; right: 16px; bottom: calc(82px + var(--safe-bot)); z-index: 40; width: 56px; height: 56px; border-radius: 16px; background: linear-gradient(180deg, var(--gold-soft), var(--gold-deep)); display: grid; place-items: center; box-shadow: 0 8px 24px rgba(255,200,87,.35), 0 2px 8px rgba(0,0,0,.3); color: #2A1F0A; }
+.fab:active { transform: scale(.95); }
+
+/* ============ 시트(모달) ============ */
+.sheet-backdrop { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,.55); display: none; animation: fadein .2s; }
+.sheet-backdrop.show { display: block; }
+@keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+
+.sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 101; background: var(--bg-0); border-radius: 20px 20px 0 0; max-height: 92vh; max-height: 92dvh; display: flex; flex-direction: column; transform: translateY(100%); transition: transform .3s cubic-bezier(.32,.72,0,1); padding-bottom: var(--safe-bot); }
+.sheet.show { transform: translateY(0); }
+.sheet-handle { width: 36px; height: 4px; border-radius: 2px; background: var(--line); margin: 8px auto 4px; flex-shrink: 0; }
+.sheet-head { padding: 8px 16px 12px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line-soft); flex-shrink: 0; }
+.sheet-head h2 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -.02em; }
+.sheet-head button { color: var(--gold); font-weight: 600; font-size: 14px; padding: 8px; }
+.sheet-body { padding: 16px; overflow-y: auto; flex: 1; -webkit-overflow-scrolling: touch; }
+
+/* 토스트 */
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(100px + var(--safe-bot)); z-index: 200; background: var(--bg-3); color: var(--ink); padding: 11px 18px; border-radius: 12px; font-size: 13px; font-weight: 500; border: 1px solid var(--line); box-shadow: var(--shadow); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+
+/* 차편/표/회비 */
+.transport-tabs { display: flex; gap: 4px; overflow-x: auto; margin: 0 -16px 12px; padding: 0 16px; scrollbar-width: none; }
+.transport-tabs::-webkit-scrollbar { display: none; }
+.tt-pill { flex-shrink: 0; padding: 6px 12px; border-radius: 8px; background: var(--bg-1); border: 1px solid var(--line); color: var(--ink-soft); font-size: 12px; font-weight: 500; white-space: nowrap; }
+.tt-pill.active { background: var(--bg-3); color: var(--gold); border-color: var(--gold); }
+
+.roster-table { background: var(--bg-1); border: 1px solid var(--line-soft); border-radius: 12px; overflow: hidden; margin-bottom: 12px;}
+.roster-row { display: grid; grid-template-columns: 28px 1fr 56px 60px; gap: 8px; padding: 9px 12px; align-items: center; border-bottom: 1px solid var(--line-soft); font-size: 13px; }
+.roster-row:last-child { border-bottom: none; }
+.roster-row.head { background: var(--bg-2); font-size: 11px; color: var(--ink-mute); font-weight: 600; }
+.roster-row .no { color: var(--ink-mute); font-size: 12px; }
+.roster-row .nm { font-weight: 500; }
+.roster-row .zo { color: var(--ink-soft); font-size: 12px; }
+.roster-row .de { color: var(--ink-mute); font-size: 11px; }
+
+.fee-grid { display: grid; gap: 8px; }
+.fee-item { display: flex; align-items: center; justify-content: space-between; background: var(--bg-1); border: 1px solid var(--line-soft); border-radius: 12px; padding: 12px 14px; }
+.fee-item .nm { font-weight: 500; }
+.fee-item .amount { font-weight: 700; color: var(--gold); font-variant-numeric: tabular-nums; }
+
+/* 설정 — 메뉴 리스트 */
+.menu-list { display: flex; flex-direction: column; gap: 2px; }
+.menu-item { display: flex; align-items: center; gap: 12px; padding: 14px 14px; background: var(--bg-1); border: 1px solid var(--line-soft); border-radius: 12px; }
+.menu-item .ic { width: 36px; height: 36px; border-radius: 10px; background: var(--bg-2); display: grid; place-items: center; color: var(--gold); }
+.menu-item .lb { flex: 1; text-align: left; }
+.menu-item .lb .t { font-size: 14px; font-weight: 500; }
+.menu-item .lb .d { font-size: 12px; color: var(--ink-mute); margin-top: 1px; }
+
+/* 검색 바 */
+.searchbar { position: relative; margin-bottom: 12px; display: flex; }
+.searchbar input { padding-left: 38px; flex: 1; border-radius: 10px 0 0 10px; border-right: none;}
+.searchbar .icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--ink-mute); pointer-events: none; }
+.searchbar .btn-print { border-radius: 0; border: none; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--bg-2); padding: 0 15px; font-weight: 600; color: var(--gold); }
+.searchbar .btn-reset { border-radius: 0 10px 10px 0; border: none; border: 1px solid var(--line); border-left: 1px solid var(--line-soft); background: var(--bg-2); padding: 0 15px; font-weight: 600; color: var(--rose); }
+
+/* UI Split Table (상하행 화면용) */
+/* 차편 화면 — 좌우 분할 (두 개의 독립 테이블 + flex) */
+.split-wrap-ui { display: flex; gap: 8px; margin-bottom: 12px; align-items: flex-start; }
+.split-wrap-ui .split-side { flex: 1 1 0; min-width: 0; }
+.split-ui-table { width: 100%; border-collapse: collapse; font-size: 12px; background: var(--bg-1); border-radius: 8px; overflow: hidden; table-layout: fixed; }
+.split-ui-table th, .split-ui-table td { border: 1px solid var(--line-soft); padding: 6px 4px; text-align: center; word-break: keep-all; }
+.split-ui-table th { background: var(--bg-2); color: var(--ink-mute); font-weight: 600; font-size: 11px; }
+.split-ui-table th.side-head { font-size: 12px; color: var(--gold); padding: 7px 4px; }
+.split-ui-table td.nm { font-weight: 600; color: var(--ink); }
+.split-ui-table td.check-cell { background: var(--bg-0); }
+/* 모바일에서 글자가 작아져도 부서 칸이 잘리지 않도록 */
+@media (max-width: 520px) {
+  .split-wrap-ui { gap: 6px; }
+  .split-ui-table { font-size: 11px; }
+  .split-ui-table th, .split-ui-table td { padding: 5px 2px; }
+}
+
+/* 대형 모달 */
+.modal { position: fixed; inset: 0; z-index: 150; background: rgba(0,0,0,.7); display: none; align-items: center; justify-content: center; padding: 20px; }
+.modal.show { display: flex; }
+.modal .box { background: var(--bg-1); border: 1px solid var(--line); border-radius: 16px; padding: 20px; max-width: 380px; width: 100%; }
+.modal h3 { margin: 0 0 8px; font-size: 16px; font-weight: 700; }
+.modal p { margin: 0 0 16px; color: var(--ink-soft); font-size: 14px; }
+.modal .actions { display: flex; gap: 8px; }
+.modal .actions .btn { flex: 1; }
+
+.section-title { font-size: 11px; color: var(--ink-mute); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; margin: 16px 0 8px; }
+/* 합류/이탈 시점 라디오 pill */
+.time-pill-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.time-pill { position: relative; padding: 8px 14px; border-radius: 18px; background: var(--bg-2); border: 1px solid var(--line-soft); font-size: 13px; color: var(--ink-soft); cursor: pointer; transition: all .15s; user-select: none; }
+.time-pill input[type="radio"] { position: absolute; opacity: 0; pointer-events: none; }
+.time-pill.active { background: var(--gold-soft); border-color: var(--gold); color: #1a1300; font-weight: 700; }
+.time-pill:hover:not(.active) { background: var(--bg-1); }
+.notice { background: rgba(108,122,224,.08); border: 1px solid rgba(108,122,224,.25); border-radius: 12px; padding: 12px 14px; font-size: 12px; color: var(--indigo-soft); margin-bottom: 12px; }
+
+/* ============ 프린트 전용 레이아웃 ============ */
+.print-only { display: none; }
+@media print {
+  body, html { background: #fff !important; color: #000 !important; height: auto !important; margin: 0; padding: 0; }
+  #app, .tabbar, .sheet-backdrop, .sheet, .modal, .toast { display: none !important; }
+  .print-only { display: block !important; }
+  #printArea { width: 100%; font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; color: #000; }
+  .print-title { text-align: center; font-size: 20px; font-weight: bold; margin-bottom: 15px; padding-bottom: 10px;}
+  
+  .print-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 20px; border: 2px solid #000 !important; }
+  .print-table th, .print-table td { border: 1px solid #000 !important; padding: 4px 3px; text-align: center; vertical-align: middle; word-break: break-all; }
+  .print-table th { background: #eee !important; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  /* 교통편 셀 — 한 줄에 들어가도록 폰트·간격 최적화 (정 안 들어가면 자연 줄바꿈) */
+  .print-table td.trans-cell { font-size: 10px; line-height: 1.3; word-break: keep-all; white-space: normal; padding: 3px 4px; letter-spacing: -0.2px; }
+  .print-table td.note-cell { font-size: 10px; line-height: 1.25; word-break: keep-all; }
+  /* 이름 컬럼 — 모든 인쇄에서 통일: 약간 크고 굵게 */
+  .print-table td.print-name { font-size: 12.5px; font-weight: 700; letter-spacing: -0.1px; word-break: keep-all; white-space: nowrap; }
+  /* split table (차편)에서도 동일 */
+  .split-print-table td.print-name { font-size: 12.5px; font-weight: 700; letter-spacing: -0.1px; word-break: keep-all; white-space: nowrap; }
+  .split-print-table td.nm { font-size: 12.5px; font-weight: 700; letter-spacing: -0.1px; word-break: keep-all; white-space: nowrap; }
+  
+  .print-table tr th:first-child, .print-table tr td:first-child { border-left: 2px solid #000 !important; }
+  .print-table tr th:last-child,  .print-table tr td:last-child  { border-right: 2px solid #000 !important; }
+  .print-table thead tr:first-child th { border-top: 2px solid #000 !important; }
+  .print-table tr:last-child td { border-bottom: 2px solid #000 !important; }
+
+  /* 차편 좌우 분할 — wrapper table 방식 (모든 인쇄 엔진에서 안정적으로 좌우 배치) */
+  .split-print-wrap { width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 14px; table-layout: fixed; border: none !important; }
+  .split-print-wrap > tbody > tr > td { border: none !important; padding: 0; vertical-align: top; }
+  .split-print-wrap .split-print-cell { width: 49%; padding: 0; }
+  .split-print-wrap .split-print-gap { width: 2%; padding: 0; background: transparent; }
+  .split-print-table { width: 100%; border-collapse: collapse; font-size: 11px; margin: 0; border: 2px solid #000 !important; table-layout: fixed; }
+  .split-print-table th, .split-print-table td { border: 1px solid #000 !important; padding: 4px 2px; text-align: center; vertical-align: middle; word-break: keep-all; }
+  .split-print-table th { background: #eee !important; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .split-print-table th.side-head { font-size: 12px; padding: 5px 4px; }
+  .split-print-table td.check-cell { background: #fff !important; }
+  
+  @page { size: A4 portrait; margin: 12mm 10mm; }
+}
+
+@media (min-width: 720px) {
+  main.content { padding: 24px; }
+  .stat-grid { grid-template-columns: repeat(4, 1fr); }
+}
+@supports (-webkit-touch-callout: none) {
+  html { background: var(--bg-0); }
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="badge">
+        <svg viewBox="0 0 24 24" fill="#2A1F0A"><path d="M12 2L2 22h20L12 2zm0 4.8l5.5 11H6.5L12 6.8z"/><path d="M11 8h2v3h2v2h-2v3h-2v-3H9v-2h2V8z"/></svg>
+      </div>
+      <div>
+        <h1 id="topbarTitle">하계수양회</h1>
+        <div class="sub" id="topbarSub">등록 관리</div>
+      </div>
+    </div>
+    <button class="iconbtn" id="btnExit" aria-label="앱 종료">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+    </button>
+  </header>
+
+  <main class="content" id="view"></main>
+</div>
+
+<div id="printArea" class="print-only"></div>
+
+<nav class="tabbar">
+  <button data-tab="home" class="active">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> 홈
+  </button>
+  <button data-tab="roster">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> 명단
+  </button>
+  <button data-tab="transport">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><circle cx="7" cy="19" r="2"/><circle cx="17" cy="19" r="2"/><path d="M3 11h18"/></svg> 차편
+  </button>
+  <button data-tab="more">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg> 더보기
+  </button>
+</nav>
+
+<div class="sheet-backdrop" id="sheetBackdrop"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-head"><button id="sheetCancel">취소</button><h2 id="sheetTitle"></h2><button id="sheetSave">저장</button></div>
+  <div class="sheet-body" id="sheetBody"></div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="box">
+    <h3 id="modalTitle"></h3><p id="modalMsg"></p>
+    <div class="actions"><button class="btn btn-secondary" id="modalCancel">취소</button><button class="btn btn-danger" id="modalOk">확인</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none"/>
+<input type="file" id="jsonInput" accept=".json" style="display:none"/>
+
+<script>
+/* ============================================================
+ * 하계수양회 등록 관리 (업데이트 V13)
+ * ============================================================ */
+
+let ZONES = ['11구역','12구역','13구역','21구역','22구역','23구역','31구역','32구역'];
+let SESSIONS = ['1차','2차','3차','4차','5차','6차','7차','8차'];
+let BUSES = ['1호차','2호차','3호차','4호차','5호차'];
+let CHURCH_CARS = ['교회차1','교회차2'];
+const PRIVATE_CARS = ['개인차']; 
+let OTHER_TRANSPORTS = ['타교회','대중교통'];
+
+let EXTRA_UPS = ['금저'];
+let EXTRA_DOWNS = ['토저'];
+
+let PRIVATE_CAR_LIST = [];
+let TRANSPORT_MAIN_OPTIONS = [];
+let TRANSPORT_EXTRA_OPTIONS = [];
+
+const DEPTS = ['은장회','봉사회','어머니회','청년회','대학부','중고등부','초등부','유치부','미취학'];
+const DEFAULT_FEES = {
+  '은장회': 50000, '봉사회': 70000, '어머니회': 70000, '청년회': 70000,
+  '대학부': 50000, '중고등부': 0, '초등부': 0, '유치부': 0, '미취학': 0,
+};
+const STORAGE_KEY = 'retreat-pwa-v1';
+
+function updateTransportOptions() {
+  TRANSPORT_MAIN_OPTIONS  = ['', ...BUSES];
+  TRANSPORT_EXTRA_OPTIONS = ['', ...CHURCH_CARS, ...OTHER_TRANSPORTS, ...PRIVATE_CAR_LIST];
+}
+
+function emptyMember(zone) {
+  return {
+    id: uid(), zone: zone || ZONES[0], dept: '', name: '', session: '',
+    transUp: '', transDown: '', privateUp: '', privateDown: '',
+    extraUp: {}, extraDown: {},
+    leaderName: '', leaderRel: '', lodging: '', salvation: false, baptism: false, note: ''
+  };
+}
+function emptyEvangelism() {
+  return { id: uid(), memberId: '', zone:'', dept:'', name:'', relation:'', leader:'', lodging:'', salvation:'', baptism:'', note:'' };
+}
+function emptyFeeSupport() {
+  return { id: uid(), memberId: '', zone:'', dept:'', name:'', amount:0, note:'' };
+}
+function uid(){ return Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-4); }
+
+/* ===== 멀티 행사 저장 구조 =====
+   localStorage에는 vault = { events: [...], activeId } 형태로 저장.
+   기존 단일 DB(STORAGE_KEY)는 자동으로 첫 행사로 마이그레이션됨.
+   런타임에는 DB = vault.events.find(e => e.id === vault.activeId) 로 alias. */
+const VAULT_KEY = 'retreat-vault-v1';
+let VAULT = null; // { events: [evt, ...], activeId }
+let DB = loadDB();
+syncEvFsLinks();
+
+function newEventId() { return 'evt_' + Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-4); }
+
+function freshEvent(title) {
+  return {
+    id: newEventId(),
+    meta: { title: title || '새 수양회', session: '2차', upTime: '', downTime: '' },
+    settings: { zones: ['11구역','12구역','13구역','21구역','22구역','23구역','31구역','32구역'],
+                sessions: ['1차','2차','3차','4차','5차','6차','7차','8차'],
+                buses: ['1호차','2호차','3호차','4호차','5호차'],
+                churchCars: ['교회차1','교회차2'],
+                otherTransports: ['타교회','대중교통'],
+                extraUps: ['금저'], extraDowns: ['토저'],
+                privateCarList: [] },
+    fees: { ...DEFAULT_FEES },
+    members: [], evangelism: [], feeSupport: [],
+    createdAt: Date.now(),
+  };
+}
+
+function loadDB() {
+  // 1) 새 vault 키가 있으면 그대로 로드
+  try {
+    const vraw = localStorage.getItem(VAULT_KEY);
+    if (vraw) {
+      VAULT = JSON.parse(vraw);
+      if (!VAULT.events || VAULT.events.length === 0) {
+        VAULT = { events: [freshEvent('새 수양회')], activeId: null };
+        VAULT.activeId = VAULT.events[0].id;
+      }
+      const active = VAULT.events.find(e => e.id === VAULT.activeId) || VAULT.events[0];
+      VAULT.activeId = active.id;
+      hydrateEvent(active);
+      return active;
+    }
+  } catch (e) { console.warn('vault load error', e); }
+
+  // 2) 옛 STORAGE_KEY(단일 DB)가 있으면 마이그레이션
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const d = JSON.parse(raw);
+      // 옛 구조에는 id가 없음 — 새로 부여
+      d.id = d.id || newEventId();
+      d.createdAt = d.createdAt || Date.now();
+      hydrateEvent(d);
+      VAULT = { events: [d], activeId: d.id };
+      saveVault();
+      // 기존 키는 백업 차원에서 남겨둠 (사용자가 안심)
+      return d;
+    }
+  } catch (e) { console.warn('legacy load error', e); }
+
+  // 3) 처음 사용자 — 빈 행사 하나 생성
+  const fe = freshEvent('2026년 하계수양회');
+  fe.meta.upTime = "7월 17일(금) 오전 8시";
+  fe.meta.downTime = "7월 19일(주일) 오전 10시";
+  hydrateEvent(fe);
+  VAULT = { events: [fe], activeId: fe.id };
+  saveVault();
+  return fe;
+}
+
+// 행사 데이터의 결손 필드 채우고 글로벌 변수 동기화
+function hydrateEvent(d) {
+  if (d.settings) {
+    if (d.settings.zones) ZONES = d.settings.zones;
+    if (d.settings.sessions) SESSIONS = d.settings.sessions;
+    if (d.settings.buses) BUSES = d.settings.buses;
+    if (d.settings.churchCars) CHURCH_CARS = d.settings.churchCars;
+    if (d.settings.otherTransports) OTHER_TRANSPORTS = d.settings.otherTransports;
+    if (d.settings.extraUps) EXTRA_UPS = d.settings.extraUps;
+    if (d.settings.extraDowns) EXTRA_DOWNS = d.settings.extraDowns;
+    if (d.settings.privateCarList) PRIVATE_CAR_LIST = d.settings.privateCarList;
+  }
+  if (d.members) {
+    d.members.forEach(m => {
+      m.extraUp = m.extraUp || {}; m.extraDown = m.extraDown || {};
+      if (m.goldUp) { m.extraUp[EXTRA_UPS[0] || '금저'] = m.goldUp; delete m.goldUp; }
+      if (m.torDown) { m.extraDown[EXTRA_DOWNS[0] || '토저'] = m.torDown; delete m.torDown; }
+    });
+  }
+  if (d.fees) { Object.keys(DEFAULT_FEES).forEach(k => { if (d.fees[k] === undefined) d.fees[k] = DEFAULT_FEES[k]; }); }
+  else { d.fees = { ...DEFAULT_FEES }; }
+  if (!d.meta) d.meta = {};
+  if (!d.meta.title) d.meta.title = '새 수양회';
+  if (!d.meta.session) d.meta.session = '2차';
+  if (!d.members) d.members = [];
+  if (!d.evangelism) d.evangelism = [];
+  if (!d.feeSupport) d.feeSupport = [];
+  updateTransportOptions();
+}
+
+function saveVault() {
+  try { localStorage.setItem(VAULT_KEY, JSON.stringify(VAULT)); }
+  catch(e) { toast('저장 실패: 저장 공간 부족 가능성', true); }
+}
+function saveDB() {
+  if (!VAULT) return;
+  // DB(활성 행사 참조)는 항상 VAULT.events 안의 객체와 동일 → 그냥 vault 전체 저장
+  saveVault();
+}
+
+/* 행사 관리 API */
+function listEvents() { return VAULT ? VAULT.events : []; }
+function switchEvent(id) {
+  if (!VAULT) return;
+  const e = VAULT.events.find(x => x.id === id);
+  if (!e) return;
+  VAULT.activeId = id;
+  DB = e;
+  hydrateEvent(DB);
+  saveVault();
+  render();
+}
+function createEvent(title) {
+  const e = freshEvent(title || '새 수양회');
+  // 현재 활성 행사의 settings + fees를 그대로 상속 — 사용자가 매번 다시 설정 안 해도 됨
+  if (DB) {
+    e.settings = JSON.parse(JSON.stringify(DB.settings));
+    e.fees = { ...DB.fees };
+    e.meta.session = DB.meta.session || '2차';
+    e.meta.upTime = '';   // 일정은 비움 (각 행사마다 다르므로)
+    e.meta.downTime = '';
+  }
+  VAULT.events.push(e);
+  VAULT.activeId = e.id;
+  DB = e;
+  hydrateEvent(DB);
+  saveVault();
+  render();
+  return e;
+}
+function renameActiveEvent(newTitle) {
+  if (!newTitle || !newTitle.trim()) return;
+  DB.meta.title = newTitle.trim();
+  saveVault(); render();
+}
+function deleteEvent(id) {
+  if (!VAULT) return;
+  if (VAULT.events.length <= 1) { toast('마지막 행사는 삭제할 수 없습니다', true); return; }
+  VAULT.events = VAULT.events.filter(e => e.id !== id);
+  if (VAULT.activeId === id) {
+    VAULT.activeId = VAULT.events[0].id;
+    DB = VAULT.events[0];
+    hydrateEvent(DB);
+  }
+  saveVault(); render();
+}
+
+/* ====== 옛 단일 freshDB는 유지 (다른 코드 호환) ====== */
+function freshDB() { return freshEvent(); }
+
+function syncEvFsLinks() {
+  DB.evangelism.forEach(e => {
+    if (!e.memberId && e.name) {
+      const m = DB.members.find(x => x.name === e.name && x.zone === e.zone);
+      if (m) e.memberId = m.id;
+    }
+  });
+  DB.feeSupport.forEach(f => {
+    if (!f.memberId && f.name) {
+      const m = DB.members.find(x => x.name === f.name && x.zone === f.zone);
+      if (m) f.memberId = m.id;
+    }
+  });
+}
+
+function $(sel, root=document) { return root.querySelector(sel); }
+function $$(sel, root=document) { return Array.from(root.querySelectorAll(sel)); }
+function esc(s) { return (s===null||s===undefined) ? '' : String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function won(n) { return (!n) ? '0' : n.toLocaleString('ko-KR'); }
+function toast(msg, isError=false) {
+  const el = $('#toast');
+  el.textContent = msg; el.className = 'toast show' + (isError ? ' error' : '');
+  clearTimeout(toast._t); toast._t = setTimeout(() => el.className = 'toast' + (isError ? ' error' : ''), 2200);
+}
+function confirmModal(title, msg, onOk, okLabel='확인') {
+  $('#modalTitle').textContent = title; $('#modalMsg').textContent = msg; $('#modalOk').textContent = okLabel;
+  $('#modal').classList.add('show');
+  $('#modalOk').onclick = () => { $('#modal').classList.remove('show'); onOk(); };
+  $('#modalCancel').onclick = () => $('#modal').classList.remove('show');
+}
+function getYearPrefix() {
+  const match = DB.meta.title.match(/^(\d{4})년/);
+  return match ? match[1] + '년도' : '2026년도';
+}
+
+function getLodgings() {
+  const dict = {};
+  DB.members.forEach(m => {
+    const l = m.lodging ? m.lodging.trim() : '';
+    if (!l) return; 
+    if (!dict[l]) dict[l] = [];
+    dict[l].push(m);
+  });
+  return dict;
+}
+
+function buildSplitTable(title, uList, dList, isPrint=false) {
+   // 상행/하행을 각자 위에서부터 채움. 외곽선이 깨지는 문제를 막기 위해
+   // 두 개의 독립된 <table>을 좌우로 나란히 배치 (각자 닫힌 외곽선을 가짐)
+   const uSorted = uList.slice().sort((a,b) => {
+     const z = (a.zone||'').localeCompare(b.zone||'','ko');
+     return z !== 0 ? z : (a.name||'').localeCompare(b.name||'','ko');
+   });
+   const dSorted = dList.slice().sort((a,b) => {
+     const z = (a.zone||'').localeCompare(b.zone||'','ko');
+     return z !== 0 ? z : (a.name||'').localeCompare(b.name||'','ko');
+   });
+
+   const tableClass = isPrint ? 'split-print-table' : 'split-ui-table';
+
+   function buildSide(label, list, headLabel) {
+     const rows = list.length === 0
+       ? `<tr><td colspan="5" style="padding:14px;text-align:center;color:#888;">데이터가 없습니다.</td></tr>`
+       : list.map((m, i) => `<tr>
+           <td>${i+1}</td>
+           <td>${esc(m.zone)}</td>
+           <td class="nm print-name">${esc(m.name)}</td>
+           <td>${esc(m.dept)}</td>
+           <td class="check-cell"></td>
+         </tr>`).join('');
+     return `<table class="${tableClass}">
+       <thead>
+         <tr><th colspan="5" class="side-head ${label==='상행'?'up-head':'down-head'}">${label} (${list.length}명)</th></tr>
+         <tr>
+           <th style="width:${isPrint?'10%':'10%'}">번호</th>
+           <th style="width:${isPrint?'15%':'18%'}">구역</th>
+           <th style="width:${isPrint?'23%':'22%'}">성명</th>
+           <th style="width:${isPrint?'25%':'26%'}">부서</th>
+           <th style="width:${isPrint?'14%':'14%'}">확인</th>
+         </tr>
+       </thead>
+       <tbody>${rows}</tbody>
+     </table>`;
+   }
+
+   // 좌우 배치 — 인쇄는 wrapper <table>로(어떤 인쇄 엔진에서도 안정), 화면은 flex
+   const sideUp = buildSide('상행', uSorted, '상행');
+   const sideDown = buildSide('하행', dSorted, '하행');
+   const titleHtml = title ? `<div class="${isPrint ? 'print-title' : 'card-title'}" style="${isPrint? 'font-size:16px;margin:20px 0 10px;text-align:left;border:none;' : 'margin:14px 0 8px;font-weight:700;color:var(--gold);'}">${title}</div>` : '';
+
+   if (isPrint) {
+     // 외부 table로 강제 좌우 배치 — Android/iOS PDF에서도 동일 동작
+     return `
+       ${titleHtml}
+       <table class="split-print-wrap" style="width:100%;table-layout:fixed;border-collapse:separate;border-spacing:0;margin-bottom:14px;">
+         <colgroup>
+           <col style="width:49%"><col style="width:2%"><col style="width:49%">
+         </colgroup>
+         <tr>
+           <td class="split-print-cell" style="padding:0;vertical-align:top;border:none;">${sideUp}</td>
+           <td class="split-print-gap" style="padding:0;border:none;"></td>
+           <td class="split-print-cell" style="padding:0;vertical-align:top;border:none;">${sideDown}</td>
+         </tr>
+       </table>
+     `;
+   }
+   // 화면(UI): flex 그대로
+   return `
+     ${titleHtml}
+     <div class="split-wrap-ui">
+       <div class="split-side">${sideUp}</div>
+       <div class="split-side">${sideDown}</div>
+     </div>
+   `;
+}
+
+function buildPrintDocument(title, bodyHtml) {
+  // 모든 인쇄 페이지 하단 중앙에 들어갈 부산중부교회 로고 (SVG 인라인 — 외부 파일/네트워크 의존 없음)
+  const logoSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 90" width="220" height="55" preserveAspectRatio="xMidYMid meet">
+    <defs><radialGradient id="g1" cx="35%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#5a8fd6"/><stop offset="60%" stop-color="#2c5fa8"/><stop offset="100%" stop-color="#1a3f7a"/>
+    </radialGradient></defs>
+    <circle cx="40" cy="45" r="34" fill="url(#g1)"/>
+    <ellipse cx="40" cy="45" rx="34" ry="11" fill="none" stroke="#7fb0e8" stroke-width="0.8" opacity="0.6"/>
+    <ellipse cx="40" cy="45" rx="34" ry="22" fill="none" stroke="#7fb0e8" stroke-width="0.8" opacity="0.5"/>
+    <ellipse cx="40" cy="45" rx="11" ry="34" fill="none" stroke="#7fb0e8" stroke-width="0.8" opacity="0.6"/>
+    <ellipse cx="40" cy="45" rx="22" ry="34" fill="none" stroke="#7fb0e8" stroke-width="0.8" opacity="0.5"/>
+    <line x1="6" y1="45" x2="74" y2="45" stroke="#7fb0e8" stroke-width="0.9" opacity="0.7"/>
+    <g fill="#fff">
+      <path d="M 18 38 Q 22 28 34 30 Q 44 31 50 38 Q 52 42 49 45 Q 45 48 40 47 L 35 50 Q 30 52 26 50 L 22 52 Q 19 52 18 49 Q 16 44 18 38 Z"/>
+      <circle cx="50" cy="36" r="4.5"/>
+      <path d="M 53 35 L 58 34 L 53 37 Z" fill="#f7a948"/>
+      <path d="M 28 32 Q 22 22 14 22 Q 18 28 22 34 Q 25 38 28 36 Z"/>
+      <path d="M 32 34 Q 28 24 22 20 Q 26 30 30 38 Z" opacity="0.85"/>
+      <path d="M 18 46 Q 12 50 8 52 Q 12 50 16 50 Q 18 49 19 47 Z"/>
+    </g>
+    <circle cx="51" cy="35.5" r="0.7" fill="#1a3f7a"/>
+    <text x="85" y="32" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif" font-size="14" font-weight="500" fill="#222">대한예수교</text>
+    <text x="85" y="50" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif" font-size="14" font-weight="500" fill="#222">침례회</text>
+    <text x="155" y="60" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif" font-size="40" font-weight="900" fill="#111" letter-spacing="-1.5">부산중부교회</text>
+  </svg>`;
+
+  return `<!DOCTYPE html>
+<html lang="ko"><head>
+<meta charset="utf-8"/>
+<title>${esc(title)}</title>
+<style>
+  @page { size: A4 portrait; margin: 12mm 10mm 22mm 10mm; }
+  * { box-sizing: border-box; }
+  html, body { background: #fff; color: #000; margin: 0; padding: 0;
+    font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { padding: 4mm 4mm 60px 4mm; }
+  .print-title { text-align: center; font-size: 18px; font-weight: 700; margin: 0 0 12px; padding-bottom: 6px; border-bottom: 2px solid #000; }
+  .print-section { margin-top: 14px; }
+  .print-section-title { font-size: 13px; font-weight: 700; margin: 12px 0 6px; padding: 4px 6px; background: #eee; border-left: 4px solid #000; }
+  .print-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 12px; border: 2px solid #000; }
+  .print-table th, .print-table td { border: 1px solid #000; padding: 4px 5px; text-align: center; vertical-align: middle; word-break: keep-all; }
+  .print-table th { background: #eee; font-weight: 700; }
+  .print-table .tl { text-align: left; }
+  /* 교통편 셀 폰트·간격 */
+  .print-table td.trans-cell { font-size: 10px; line-height: 1.3; word-break: keep-all; white-space: normal; padding: 3px 4px; letter-spacing: -0.2px; }
+  .print-table td.note-cell { font-size: 10px; line-height: 1.25; word-break: keep-all; }
+  .print-table td.print-name { font-size: 12.5px; font-weight: 700; letter-spacing: -0.1px; word-break: keep-all; white-space: nowrap; }
+  .split-print-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 12px; border: 2px solid #000; table-layout: fixed; }
+  .split-print-table th, .split-print-table td { border: 1px solid #000; padding: 4px 2px; text-align: center; vertical-align: middle; word-break: keep-all; }
+  .split-print-table th { background: #eee; font-weight: 700; }
+  .split-print-table th.side-head { font-size: 12px; padding: 5px 4px; }
+  .split-print-table td.check-cell { background: #fff; }
+  .split-print-table td.print-name, .split-print-table td.nm { font-size: 12.5px; font-weight: 700; letter-spacing: -0.1px; word-break: keep-all; white-space: nowrap; }
+  .split-print-wrap { width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 14px; table-layout: fixed; border: none; }
+  .split-print-wrap > tbody > tr > td { border: none; padding: 0; vertical-align: top; }
+  .lodging-print-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 12px; table-layout: fixed; border: none; }
+  .lodging-print-table th, .lodging-print-table td { border: 1px solid #000; padding: 4px 2px; text-align: center; vertical-align: middle; word-break: keep-all; }
+  .lodging-print-table th { background: #eee; font-weight: 700; }
+  .lodging-print-table .spacer { border: none; background: #fff; padding: 0; }
+  .lodging-print-table td.print-name { font-size: 12.5px; font-weight: 700; letter-spacing: -0.1px; white-space: nowrap; }
+  .lodging-print-table tr th:nth-child(1), .lodging-print-table tr td:nth-child(1) { border-left: 2px solid #000; }
+  .lodging-print-table tr th:nth-child(4), .lodging-print-table tr td:nth-child(4) { border-right: 2px solid #000; }
+  .lodging-print-table tr th:nth-child(6), .lodging-print-table tr td:nth-child(6) { border-left: 2px solid #000; }
+  .lodging-print-table tr th:nth-child(9), .lodging-print-table tr td:nth-child(9) { border-right: 2px solid #000; }
+  .lodging-print-table thead tr:first-child th { border-top: 2px solid #000; }
+  .lodging-print-table tr:last-child td { border-bottom: 2px solid #000; }
+  .lodging-print-table thead tr:first-child th.spacer,
+  .lodging-print-table tr:last-child td.spacer { border-top: none; border-bottom: none; }
+  .grid-stat { display: grid; gap: 6px; margin-bottom: 10px; }
+  .stat-cell { border: 1px solid #000; padding: 6px 4px; text-align: center; }
+  .stat-cell .lbl { font-size: 10px; color: #555; }
+  .stat-cell .val { font-size: 16px; font-weight: 700; margin-top: 2px; }
+  .stat-cell .sub { font-size: 10px; color: #b8860b; font-weight: 700; margin-top: 1px; }
+  .meta-row { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 8px; color: #333; }
+  /* 페이지 하단 중앙 로고 */
+  .print-footer-logo { position: fixed; bottom: 8mm; left: 0; right: 0; text-align: center; }
+  .print-footer-logo svg { display: inline-block; }
+  @media print { .no-print { display: none; } }
+</style>
+<script>
+  window.onload = function() {
+    setTimeout(function() {
+      try { window.focus(); window.print(); } catch(e) { console.error(e); }
+    }, 150);
+  };
+<\/script>
+</head>
+<body>
+${bodyHtml}
+<div class="print-footer-logo">${logoSvg}</div>
+</body></html>`;
+}
+
+function doPrint(title, bodyHtml) {
+  const old = document.getElementById('printFrame');
+  if (old) old.remove();
+
+  const iframe = document.createElement('iframe');
+  iframe.id = 'printFrame';
+  iframe.setAttribute('aria-hidden', 'true');
+  iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+  document.body.appendChild(iframe);
+
+  const fullHtml = buildPrintDocument(title, bodyHtml);
+  try { iframe.srcdoc = fullHtml; } 
+  catch (e) { const doc = iframe.contentDocument || iframe.contentWindow.document; doc.open(); doc.write(fullHtml); doc.close(); }
+}
+
+function getTransportStats() {
+  let countUp = { '본대버스': 0, '개인차': 0 };
+  let countDown = { '본대버스': 0, '개인차': 0 };
+  CHURCH_CARS.forEach(c => { countUp[c] = 0; countDown[c] = 0; });
+  OTHER_TRANSPORTS.forEach(o => { countUp[o] = 0; countDown[o] = 0; });
+
+  function mapT(val) {
+    if (!val) return null;
+    if (BUSES.includes(val)) return '본대버스';
+    if (CHURCH_CARS.includes(val)) return val;
+    if (PRIVATE_CAR_LIST.includes(val) || val === '개인차') return '개인차';
+    if (OTHER_TRANSPORTS.includes(val)) return val;
+    return null;
+  }
+
+  DB.members.forEach(m => {
+    let aUp = Object.values(m.extraUp||{}).find(v=>v) || m.transUp;
+    let mUp = mapT(aUp);
+    if (mUp && countUp[mUp] !== undefined) countUp[mUp]++;
+
+    let aDn = Object.values(m.extraDown||{}).find(v=>v) || m.transDown;
+    let mDn = mapT(aDn);
+    if (mDn && countDown[mDn] !== undefined) countDown[mDn]++;
+  });
+
+  const keys = ['본대버스', ...CHURCH_CARS, '개인차', ...OTHER_TRANSPORTS];
+  // 등록된(데이터가 있는) 항목만 표시 — 0인 카테고리는 제외
+  return {
+    up: keys.map(k => [k, countUp[k]||0]).filter(x => x[1] > 0),
+    down: keys.map(k => [k, countDown[k]||0]).filter(x => x[1] > 0)
+  };
+}
+
+function rosterPrintRowsHtml(list, startNo, mode, opts) {
+  startNo = startNo || 1;
+  mode = mode || 'all'; // 'zone' | 'dept' | 'all'
+  opts = opts || {};
+  // 회별 인쇄에서는 '부서' 컬럼이 중복이라 '구역' 컬럼으로 대체
+  const showZone = mode === 'dept'; // dept 모드일 때 부서 자리에 구역 표시
+  let trs = list.map((m, i) => {
+    let up = m.transUp || ''; let down = m.transDown || '';
+    const extraUp = Object.keys(m.extraUp || {}).find(k => m.extraUp[k]);
+    const extraDown = Object.keys(m.extraDown || {}).find(k => m.extraDown[k]);
+    if (extraUp) up = `${m.extraUp[extraUp]} (${extraUp})`;
+    if (extraDown) down = `${m.extraDown[extraDown]} (${extraDown})`;
+    const transStr = (up || down) ? `상:${up||'-'} / 하:${down||'-'}` : '';
+    const col3 = showZone ? esc(m.zone) : esc(m.dept);
+    return `<tr>
+      <td>${startNo + i}</td><td class="print-name">${esc(m.name)}</td><td>${col3}</td>
+      <td>${esc(m.session)}</td><td class="tl trans-cell">${esc(transStr)}</td>
+      <td>${esc(m.lodging||'')}</td><td class="tl note-cell">${esc(m.note)}</td>
+    </tr>`;
+  }).join('');
+  if (!trs) trs = `<tr><td colspan="7" style="padding:20px; color:#666;">등록된 인원이 없습니다.</td></tr>`;
+  // 비율(합=100):
+  //   zone(구역별): 교통 27 / 숙소 20 / 비고 25  → 비고 넓게
+  //   dept(회별) : 교통 38 / 숙소 18 / 비고 14  → 교통 넓게
+  //   all (전체) : 교통 34 / 숙소 22 / 비고 15
+  let cols;
+  if (mode === 'zone')      cols = `<col style="width:6%"><col style="width:10%"><col style="width:9%"><col style="width:6%"><col style="width:27%"><col style="width:17%"><col style="width:25%">`;
+  else if (mode === 'dept') cols = `<col style="width:5%"><col style="width:10%"><col style="width:9%"><col style="width:6%"><col style="width:32%"><col style="width:18%"><col style="width:20%">`;
+  else                      cols = `<col style="width:5%"><col style="width:8%"><col style="width:10%"><col style="width:6%"><col style="width:34%"><col style="width:22%"><col style="width:15%">`;
+  return `<table class="print-table" style="table-layout:fixed">
+    <colgroup>${cols}</colgroup>
+    <thead><tr>
+      <th>번호</th><th>성명</th><th>${showZone ? '구역' : '부서(회)'}</th>
+      <th>차수</th><th>교통편</th><th>숙소</th><th>비고</th>
+    </tr></thead>
+    <tbody>${trs}</tbody>
+  </table>`;
+}
+
+function execPrintRoster() {
+  const z = rosterFilter.zone;
+  const isAll = z === ALL_ZONES;
+  const titleText = `${getYearPrefix()} ${esc(DB.meta.title.replace(/^\d{4}년도?\s*/, ''))} - ${isAll ? '전체 명단' : esc(z)}`;
+  let body = `<div class="print-title">${titleText}</div>`;
+
+  if (isAll) {
+    let any = false;
+    ZONES.forEach(zn => {
+      const zList = membersByZone(zn);
+      if (zList.length === 0) return;
+      any = true;
+      body += `<div class="print-section">
+        <div class="print-section-title">${esc(zn)} <span style="font-weight:500;color:#666;font-size:11px">· ${zList.length}명</span></div>
+        ${rosterPrintRowsHtml(zList, 1, 'zone')}
+      </div>`;
+    });
+    if (!any) body += `<div style="text-align:center; padding:30px; color:#666">등록된 인원이 없습니다.</div>`;
+  } else { body += rosterPrintRowsHtml(membersByZone(z), 1, 'zone'); }
+  doPrint(titleText, body);
+}
+
+function execPrintZoneData(zone) {
+  const titleText = `${getYearPrefix()} 하계수양회 - ${esc(zone)}`;
+  const list = membersByZone(zone);
+  let body = `<div class="print-title">${titleText}</div>`;
+  body += `<div class="print-section">
+    <div class="print-section-title">${esc(zone)} <span style="font-weight:500;color:#666;font-size:11px">· ${list.length}명</span></div>
+    ${rosterPrintRowsHtml(list, 1, 'zone')}
+  </div>`;
+  doPrint(titleText, body);
+}
+
+function execResetZone() {
+  const zone = rosterFilter.zone;
+  if (zone === ALL_ZONES) { toast('전체 보기에서는 구역을 선택해 주세요', true); return; }
+  const count = membersByZone(zone).length;
+  if (count === 0) { toast('해당 구역에 인원이 없습니다.'); return; }
+  confirmModal(`${zone} 초기화`, `${zone}의 ${count}명을 모두 삭제합니다. 되돌릴 수 없습니다.`, () => {
+    // 해당 구역 멤버 ID 모음
+    const removedIds = new Set(DB.members.filter(m => m.zone === zone).map(m => m.id));
+    // 명단에서 삭제
+    DB.members = DB.members.filter(m => m.zone !== zone);
+    // 전도대상자/회비지원도 함께 정리 (memberId 또는 zone+name 매칭)
+    DB.evangelism = DB.evangelism.filter(e => !removedIds.has(e.memberId) && e.zone !== zone);
+    DB.feeSupport = DB.feeSupport.filter(f => !removedIds.has(f.memberId) && f.zone !== zone);
+    saveDB();
+    render();
+    toast(`${zone} ${count}명이 삭제됐어요`);
+  }, '초기화');
+}
+
+function execPrintTransport() {
+  const type = transportTab.type;
+  const titleText = `${getYearPrefix()} 하계수양회 - ${esc(type)} 탑승 명단`;
+  let body = `<div class="print-title">${titleText}</div>`;
+
+  if (type === '개인차') {
+    const drivers = allPrivateDrivers();
+    if (drivers.length === 0) body += `<div style="text-align:center; padding:20px; color:#666">등록된 개인차 차주가 없습니다.</div>`;
+    else {
+      drivers.forEach(drv => {
+        const uList = driverList(drv, 'up').sort((a,b)=>(a.zone||'').localeCompare(b.zone||'','ko'));
+        const dList = driverList(drv, 'down').sort((a,b)=>(a.zone||'').localeCompare(b.zone||'','ko'));
+        if (uList.length > 0 || dList.length > 0) {
+          body += buildSplitTable(`🚗 ${esc(drv)}`, uList, dList, true);
+        }
+      });
+    }
+  } else if (BUSES.includes(type)) {
+    const u = DB.members.filter(m => m.transUp === type).sort((a,b)=>(a.zone||'').localeCompare(b.zone||'','ko'));
+    const d = DB.members.filter(m => m.transDown === type).sort((a,b)=>(a.zone||'').localeCompare(b.zone||'','ko'));
+    body += buildSplitTable(null, u, d, true);
+  } else {
+    const uList = DB.members.filter(m => m.transUp === type || Object.values(m.extraUp||{}).includes(type)).sort((a,b)=>(a.zone||'').localeCompare(b.zone||'','ko'));
+    const dList = DB.members.filter(m => m.transDown === type || Object.values(m.extraDown||{}).includes(type)).sort((a,b)=>(a.zone||'').localeCompare(b.zone||'','ko'));
+    if (uList.length === 0 && dList.length === 0) body += `<div style="text-align:center; padding:20px; color:#666">해당 차편 등록자가 없습니다.</div>`;
+    else body += buildSplitTable(`${esc(type)}`, uList, dList, true);
+  }
+  doPrint(titleText, body);
+}
+
+function execPrintSession(session) {
+  const list = DB.members.filter(m => m.session === session).sort((a,b)=>(a.zone||'').localeCompare(b.zone||'','ko'));
+  const titleText = `${getYearPrefix()} 하계수양회 - ${session} 명단`;
+  let trs = list.map((m, i) => {
+    let up = m.transUp || ''; let down = m.transDown || '';
+    const extraUp = Object.keys(m.extraUp || {}).find(k => m.extraUp[k]);
+    const extraDown = Object.keys(m.extraDown || {}).find(k => m.extraDown[k]);
+    if (extraUp) up = `${m.extraUp[extraUp]} (${extraUp})`;
+    if (extraDown) down = `${m.extraDown[extraDown]} (${extraDown})`;
+    const transStr = (up || down) ? `상:${up||'-'} / 하:${down||'-'}` : '';
+    return `<tr>
+      <td>${i+1}</td><td>${esc(m.zone)}</td><td class="print-name">${esc(m.name)}</td>
+      <td>${esc(m.dept)}</td><td class="tl trans-cell">${esc(transStr)}</td>
+      <td>${esc(m.lodging||'')}</td><td class="tl note-cell">${esc(m.note)}</td>
+    </tr>`;
+  }).join('');
+  if(!trs) trs = `<tr><td colspan="7" style="padding:20px;color:#666">인원이 없습니다.</td></tr>`;
+  const body = `<div class="print-title">${titleText}</div>
+    <table class="print-table" style="table-layout:fixed">
+      <colgroup>
+        <col style="width:5%"><col style="width:9%"><col style="width:11%">
+        <col style="width:12%"><col style="width:32%"><col style="width:18%"><col style="width:13%">
+      </colgroup>
+      <thead><tr>
+        <th>번호</th><th>구역</th><th>성명</th><th>회(부서)</th><th>교통편</th><th>숙소</th><th>비고</th>
+      </tr></thead>
+      <tbody>${trs}</tbody>
+    </table>`;
+  doPrint(titleText, body);
+}
+
+function execPrintDept(dept) {
+  const list = DB.members.filter(m => m.dept === dept).sort((a,b)=>(a.zone||'').localeCompare(b.zone||'','ko'));
+  const titleText = `${getYearPrefix()} 하계수양회 - ${dept} 명단`;
+  const body = `<div class="print-title">${titleText}</div>
+    ${rosterPrintRowsHtml(list, 1, 'dept')}`;
+  doPrint(titleText, body);
+}
+
+function execPrintEvangelism() {
+  const titleText = `${getYearPrefix()} 하계수양회 - 전도대상자 명단`;
+  let trs = DB.evangelism.map((e, i) => `<tr>
+    <td>${i+1}</td>
+    <td style="white-space:nowrap;">${esc(e.zone)}</td>
+    <td class="print-name">${esc(e.name)}</td>
+    <td style="white-space:nowrap;">${esc(e.dept)}</td>
+    <td>${esc(e.lodging||'')}</td>
+    <td style="white-space:nowrap;">${esc(e.leader)}</td>
+    <td style="white-space:nowrap;">${esc(e.relation)}</td>
+    <td class="tl">${esc(e.note)}</td>
+  </tr>`).join('');
+  if (!trs) trs = `<tr><td colspan="8" style="padding:20px; color:#666">등록된 전도대상자가 없습니다.</td></tr>`;
+
+  const body = `<div class="print-title">${titleText}</div>
+    <table class="print-table" style="font-size:10px;">
+      <thead><tr>
+        <th style="width:25px">번호</th>
+        <th style="width:40px">구역</th>
+        <th style="width:50px">성명</th>
+        <th style="width:55px">회(부서)</th>
+        <th style="width:85px">숙소</th>
+        <th style="width:50px">인도자</th>
+        <th style="width:40px">관계</th>
+        <th>비고</th>
+      </tr></thead>
+      <tbody>${trs}</tbody>
+    </table>`;
+  doPrint(titleText, body);
+}
+
+function execPrintFeeSupport() {
+  const titleText = `${getYearPrefix()} 하계수양회 - 회비 지원 명단`;
+  const fsTotal = DB.feeSupport.reduce((s, fs) => s + (fs.amount||0), 0);
+  let trs = DB.feeSupport.map((fs, i) => `<tr>
+    <td>${i+1}</td><td>${esc(fs.zone)}</td>
+    <td class="print-name">${esc(fs.name)}</td>
+    <td>${esc(fs.dept)}</td>
+    <td style="text-align:right; padding-right:10px;">${won(fs.amount)}원</td>
+    <td class="tl">${esc(fs.note)}</td>
+  </tr>`).join('');
+  if (!trs) trs = `<tr><td colspan="6" style="padding:20px; color:#666">등록된 회비 지원자가 없습니다.</td></tr>`;
+  trs += `<tr style="background:#f8f4e6;font-weight:700">
+    <td colspan="4" style="text-align:right;padding-right:10px">합계</td>
+    <td style="text-align:right;padding-right:10px">${won(fsTotal)}원</td>
+    <td></td>
+  </tr>`;
+  const body = `<div class="print-title">${titleText}</div>
+    <table class="print-table" style="table-layout:fixed">
+      <colgroup>
+        <col style="width:5%"><col style="width:10%"><col style="width:12%">
+        <col style="width:13%"><col style="width:22%"><col style="width:38%">
+      </colgroup>
+      <thead><tr>
+        <th>번호</th><th>구역</th><th>성명</th>
+        <th>회(부서)</th><th>지원금액</th><th>비고</th>
+      </tr></thead>
+      <tbody>${trs}</tbody>
+    </table>`;
+  doPrint(titleText, body);
+}
+
+function execPrintLodging() {
+  const titleText = `${getYearPrefix()} 하계수양회 - 숙소별 명단`;
+  let body = `<div class="print-title">${titleText}</div>`;
+  
+  const lodgings = getLodgings();
+  const keys = Object.keys(lodgings).sort();
+  if(keys.length === 0 || DB.members.length === 0) {
+    body += `<div style="text-align:center; padding:30px; color:#666">등록된 인원이 없습니다.</div>`;
+    return doPrint(titleText, body);
+  }
+  
+  keys.forEach(k => {
+    const list = lodgings[k].sort((a,b)=>(a.zone||'').localeCompare(b.zone||'','ko'));
+    const half = Math.ceil(list.length / 2);
+    const left = list.slice(0, half);
+    const right = list.slice(half);
+    
+    let trs = '';
+    for(let i=0; i<half; i++) {
+      let l = left[i], r = right[i];
+      trs += `<tr>
+        <td>${l?i+1:''}</td><td>${l?esc(l.zone):''}</td><td class="print-name">${l?esc(l.name):''}</td><td>${l?esc(l.dept):''}</td>
+        <td class="spacer"></td>
+        <td>${r?half+i+1:''}</td><td>${r?esc(r.zone):''}</td><td class="print-name">${r?esc(r.name):''}</td><td>${r?esc(r.dept):''}</td>
+      </tr>`;
+    }
+    body += `
+      <div class="print-section-title">${esc(k)} <span style="font-weight:500;color:#666;font-size:11px">· ${list.length}명</span></div>
+      <table class="lodging-print-table">
+        <colgroup>
+          <col style="width:5%"><col style="width:11%"><col style="width:17%"><col style="width:14%">
+          <col style="width:6%">
+          <col style="width:5%"><col style="width:11%"><col style="width:17%"><col style="width:14%">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>번호</th><th>구역</th><th>성명</th><th>부서</th>
+            <th class="spacer"></th>
+            <th>번호</th><th>구역</th><th>성명</th><th>부서</th>
+          </tr>
+        </thead>
+        <tbody>${trs}</tbody>
+      </table>
+    `;
+  });
+  
+  doPrint(titleText, body);
+}
+
+function execPrintHome() {
+  const titleText = `${esc(DB.meta.title)} - 등록 현황`;
+  const total = totalRegistered();
+  const sess = sessionCounts();
+  const depts = deptCounts();
+  const feeTotal = Object.values(feeTotalByDept()).reduce((a,b)=>a+b, 0);
+  const evCount = DB.evangelism.length;
+  const deptFees = feeTotalByDept();
+  const tStats = getTransportStats();
+
+  let body = `<div class="print-title">${titleText}</div>
+    <div class="meta-row" style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:12px;">
+      <div style="text-align:left;font-size:15px;font-weight:700;"><b>차수:</b> ${esc(DB.meta.session||'2차')}</div>
+      <div style="text-align:right;font-size:12px;"><b>상행:</b> ${esc(DB.meta.upTime)}<br/><b>하행:</b> ${esc(DB.meta.downTime)}</div>
+    </div>
+    <div class="grid-stat" style="grid-template-columns:repeat(3, 1fr)">
+      <div class="stat-cell"><div class="lbl">등록 인원</div><div class="val">${total} 명</div></div>
+      <div class="stat-cell"><div class="lbl">전도대상자</div><div class="val">${evCount} 명</div></div>
+      <div class="stat-cell"><div class="lbl">총 회비</div><div class="val" style="color:#b8860b">${won(feeTotal)} 원</div></div>
+    </div>
+
+    <div class="print-section-title">차수별 인원</div>
+    <div class="grid-stat" style="grid-template-columns:repeat(${Math.min(SESSIONS.length, 8)}, 1fr)">
+      ${SESSIONS.map(s => `<div class="stat-cell"><div class="lbl">${esc(s)}</div><div class="val">${sess[s]||0}</div></div>`).join('')}
+    </div>
+
+    <div class="print-section-title">차편 분포</div>
+    <div style="display:flex; gap:4%; margin-bottom:12px;">
+      <table class="print-table" style="width:48%; margin:0;">
+        <thead><tr><th colspan="2">상행</th></tr></thead>
+        <tbody>${tStats.up.map(d => `<tr><td>${d[0]}</td><td>${d[1]}명</td></tr>`).join('')}</tbody>
+      </table>
+      <table class="print-table" style="width:48%; margin:0;">
+        <thead><tr><th colspan="2">하행</th></tr></thead>
+        <tbody>${tStats.down.map(d => `<tr><td>${d[0]}</td><td>${d[1]}명</td></tr>`).join('')}</tbody>
+      </table>
+    </div>
+
+    <div class="print-section-title">인원 분포 및 회비 결산</div>
+    <div style="display:flex; gap:4%; align-items:flex-start;">
+      <table class="print-table" style="width:48%; margin:0;">
+        <thead><tr><th style="width:50px">구역</th><th style="width:40px">인원</th><th style="width:65px">회비</th></tr></thead>
+        <tbody>
+          ${ZONES.map(z => {
+            const ct = membersByZone(z).length;
+            const fee = feeTotalByZone(z);
+            return `<tr><td><b>${esc(z)}</b></td><td>${ct}</td><td style="text-align:right;padding-right:10px">${won(fee)}원</td></tr>`;
+          }).join('')}
+          <tr style="background:#f0f0f0;font-weight:700"><td>합계</td><td>${total}</td><td style="text-align:right;padding-right:10px">${won(feeTotal)}원</td></tr>
+        </tbody>
+      </table>
+      <table class="print-table" style="width:48%; margin:0;">
+        <thead><tr><th style="width:65px">회(부서)</th><th style="width:40px">인원</th><th style="width:70px">회비</th></tr></thead>
+        <tbody>
+          ${DEPTS.map(d => {
+            const c = depts[d]||0;
+            const fee = deptFees[d]||0;
+            return `<tr><td><b>${esc(d)}</b></td><td>${c}</td><td style="text-align:right;padding-right:10px">${won(fee)}원</td></tr>`;
+          }).join('')}
+          <tr style="background:#f0f0f0;font-weight:700"><td>합계</td><td>${total}</td><td style="text-align:right;padding-right:10px">${won(feeTotal)}원</td></tr>
+        </tbody>
+      </table>
+    </div>
+  `;
+  doPrint(titleText, body);
+}
+
+window.addEventListener('load', () => history.replaceState({ tab: 'home' }, '', '#home'));
+window.addEventListener('popstate', (e) => {
+  if (document.body.classList.contains('sheet-open')) closeSheet(true);
+  if (e.state && e.state.tab) setTab(e.state.tab, true);
+});
+
+let sheetHandlers = { save: null, cancel: null };
+function openSheet(title, bodyHTML, onSave, opts={}) {
+  $('#sheetTitle').textContent = title; $('#sheetBody').innerHTML = bodyHTML;
+  $('#sheetSave').style.display = opts.hideSave ? 'none' : ''; $('#sheetSave').textContent = opts.saveLabel || '저장';
+  sheetHandlers.save = onSave;
+  $('#sheetBackdrop').classList.add('show'); document.body.classList.add('sheet-open');
+  if (!opts.skipHistory) history.pushState({ sheet: 'open' }, '', '#sheet');
+  requestAnimationFrame(() => $('#sheet').classList.add('show'));
+}
+function closeSheet(skipHistory=false) {
+  $('#sheet').classList.remove('show'); setTimeout(() => $('#sheetBackdrop').classList.remove('show'), 280);
+  document.body.classList.remove('sheet-open'); sheetHandlers = { save:null, cancel:null };
+  if (!skipHistory && history.state && history.state.sheet) history.back();
+}
+$('#sheetCancel').onclick = () => closeSheet(); $('#sheetBackdrop').onclick = () => closeSheet();
+$('#sheetSave').onclick = () => { if (sheetHandlers.save) { if (sheetHandlers.save() !== false) closeSheet(); } else closeSheet(); };
+
+function openSessionSheet(session) {
+  const list = DB.members.filter(m => m.session === session).sort((a,b)=>(a.zone||'').localeCompare(b.zone||'','ko'));
+  let html = `
+    <div style="display:flex;gap:10px;margin-bottom:12px;">
+      <button class="btn btn-secondary btn-block" onclick="execPrintSession('${esc(session)}')">인쇄</button>
+    </div>
+    <div style="overflow-x:auto;">
+      <div class="roster-table" style="min-width:620px;">
+        <div class="roster-row head" style="grid-template-columns: 28px 45px 60px 60px 190px 120px;"><div class="no">번호</div><div>구역</div><div>성명</div><div>회(부서)</div><div>교통편</div><div>비고</div></div>
+        ${list.map((m, i) => {
+          let up = m.transUp || ''; let down = m.transDown || '';
+          const eu = Object.keys(m.extraUp || {}).find(k => m.extraUp[k]);
+          const ed = Object.keys(m.extraDown || {}).find(k => m.extraDown[k]);
+          if (eu) up = `${m.extraUp[eu]} (${eu})`;
+          if (ed) down = `${m.extraDown[ed]} (${ed})`;
+          const transStr = (up || down) ? `상:${up||'-'} / 하:${down||'-'}` : '';
+          return `<div class="roster-row" style="grid-template-columns: 28px 45px 60px 60px 190px 120px;"><div class="no">${i+1}</div><div>${esc(m.zone)}</div><div class="nm">${esc(m.name)}</div><div>${esc(m.dept)}</div><div style="font-size:11px;word-break:keep-all;line-height:1.3;">${esc(transStr)}</div><div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(m.note)}</div></div>`;
+        }).join('')}
+        ${list.length===0 ? `<div style="padding:20px;text-align:center;color:var(--ink-mute)">인원이 없습니다.</div>`:''}
+      </div>
+    </div>
+  `;
+  openSheet(`${session} 명단`, html, null, {hideSave:true});
+}
+
+function openZoneSheet(zone) {
+  const list = membersByZone(zone).sort((a,b)=>(a.name||'').localeCompare(b.name||'','ko'));
+  let html = `
+    <div style="display:flex;gap:10px;margin-bottom:12px;">
+      <button class="btn btn-secondary btn-block" onclick="execPrintZoneData('${esc(zone)}')">인쇄</button>
+    </div>
+    <div style="overflow-x:auto;">
+      <div class="roster-table" style="min-width:670px;">
+        <div class="roster-row head" style="grid-template-columns: 28px 55px 55px 36px 190px 90px 120px;"><div class="no">번호</div><div>성명</div><div>부서(회)</div><div>차수</div><div>교통편</div><div>숙소</div><div>비고</div></div>
+        ${list.map((m, i) => {
+          let up = m.transUp || ''; let down = m.transDown || '';
+          const extraUp = Object.keys(m.extraUp || {}).find(k => m.extraUp[k]);
+          const extraDown = Object.keys(m.extraDown || {}).find(k => m.extraDown[k]);
+          if (extraUp) up = `${m.extraUp[extraUp]} (${extraUp})`;
+          if (extraDown) down = `${m.extraDown[extraDown]} (${extraDown})`;
+          const transStr = (up || down) ? `상:${up||'-'} / 하:${down||'-'}` : '';
+          return `<div class="roster-row" style="grid-template-columns: 28px 55px 55px 36px 190px 90px 120px;"><div class="no">${i+1}</div><div class="nm">${esc(m.name)}</div><div>${esc(m.dept)}</div><div>${esc(m.session)}</div><div style="font-size:11px;word-break:keep-all;line-height:1.3;">${esc(transStr)}</div><div>${esc(m.lodging)}</div><div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(m.note)}</div></div>`;
+        }).join('')}
+        ${list.length===0 ? `<div style="padding:20px;text-align:center;color:var(--ink-mute)">인원이 없습니다.</div>`:''}
+      </div>
+    </div>
+  `;
+  openSheet(`${zone} 명단`, html, null, {hideSave:true});
+}
+
+function openDeptSheet(dept) {
+  const list = DB.members.filter(m => m.dept === dept).sort((a,b)=>(a.zone||'').localeCompare(b.zone||'','ko'));
+  let html = `
+    <div style="display:flex;gap:10px;margin-bottom:12px;">
+      <button class="btn btn-secondary btn-block" onclick="execPrintDept('${esc(dept)}')">인쇄</button>
+    </div>
+    <div style="overflow-x:auto;">
+      <div class="roster-table" style="min-width:660px;">
+        <div class="roster-row head" style="grid-template-columns: 28px 45px 55px 40px 190px 80px 120px;"><div class="no">번호</div><div>구역</div><div>성명</div><div>차수</div><div>교통편</div><div>숙소</div><div>비고</div></div>
+        ${list.map((m, i) => {
+          let up = m.transUp || ''; let down = m.transDown || '';
+          const extraUp = Object.keys(m.extraUp || {}).find(k => m.extraUp[k]);
+          const extraDown = Object.keys(m.extraDown || {}).find(k => m.extraDown[k]);
+          if (extraUp) up = `${m.extraUp[extraUp]} (${extraUp})`;
+          if (extraDown) down = `${m.extraDown[extraDown]} (${extraDown})`;
+          const transStr = (up || down) ? `상:${up||'-'} / 하:${down||'-'}` : '';
+          return `<div class="roster-row" style="grid-template-columns: 28px 45px 55px 40px 190px 80px 120px;"><div class="no">${i+1}</div><div>${esc(m.zone)}</div><div class="nm">${esc(m.name)}</div><div>${esc(m.session)}</div><div style="font-size:11px;word-break:keep-all;line-height:1.3;">${esc(transStr)}</div><div>${esc(m.lodging)}</div><div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(m.note)}</div></div>`;
+        }).join('')}
+        ${list.length===0 ? `<div style="padding:20px;text-align:center;color:var(--ink-mute)">인원이 없습니다.</div>`:''}
+      </div>
+    </div>
+  `;
+  openSheet(`${dept} 명단`, html, null, {hideSave:true});
+}
+
+function membersByZone(zone) { return DB.members.filter(m => m.zone === zone); }
+function totalRegistered() { return DB.members.length; }
+function sessionCounts() {
+  const r = Object.fromEntries(SESSIONS.map(s => [s, 0]));
+  DB.members.forEach(m => { if (r.hasOwnProperty(m.session)) r[m.session]++; }); return r;
+}
+function deptCounts() {
+  const r = Object.fromEntries(DEPTS.map(d => [d, 0]));
+  DB.members.forEach(m => { if (r.hasOwnProperty(m.dept)) r[m.dept]++; }); return r;
+}
+function feeTotalByDept() {
+  const totals = Object.fromEntries(DEPTS.map(d => [d, 0]));
+  DB.members.forEach(m => { if (totals.hasOwnProperty(m.dept)) totals[m.dept] += (DB.fees[m.dept] || 0); }); return totals;
+}
+function feeTotalByZone(zone) {
+  return DB.members.filter(m => m.zone === zone).reduce((s, m) => s + (DB.fees[m.dept] || 0), 0);
+}
+
+let currentTab = 'home';
+const ALL_ZONES = '__ALL__';
+let rosterFilter = { zone: ALL_ZONES, q: '' };
+let transportTab = { type: BUSES[0] || '1호차' };
+
+function setTab(tab, skipHistory=false) {
+  currentTab = tab;
+  $$('.tabbar button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  render();
+  // 페이지 최상단으로 — 모바일에서 sticky topbar 아래에 가려지지 않도록 강제
+  window.scrollTo(0, 0);
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+  if (!skipHistory) history.pushState({ tab: tab }, '', '#' + tab);
+}
+$$('.tabbar button').forEach(b => b.onclick = () => setTab(b.dataset.tab));
+
+/* ---------- 좌우 스와이프로 탭 이동 ---------- */
+(function setupSwipe() {
+  const order = ['home', 'roster', 'transport', 'more'];
+  let touchStartX = 0, touchStartY = 0, touchActive = false;
+
+  // 가로 스크롤이 가능한 조상이 있는지 체크 (있으면 스와이프 무시)
+  function hasHorizontalScrollAncestor(el) {
+    let node = el;
+    while (node && node !== document.body) {
+      if (node.scrollWidth > node.clientWidth + 2) {
+        const style = getComputedStyle(node);
+        const ox = style.overflowX;
+        if (ox === 'auto' || ox === 'scroll') return true;
+      }
+      node = node.parentElement;
+    }
+    return false;
+  }
+
+  document.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) return;
+    // 시트/모달이 열려 있으면 스와이프 무시
+    if ($('#sheet') && $('#sheet').classList.contains('show')) return;
+    if ($('#modal') && $('#modal').classList.contains('show')) return;
+    const t = e.target;
+    // 입력/버튼/스크롤 가능 컨테이너 위에선 스와이프 무시
+    if (t.closest('input,select,textarea,button,.zone-scroll,.transport-tabs')) return;
+    // 가로 스크롤 가능한 영역(전도대상자/회비지원 등 카드 내부 표) 위에선 무시
+    if (hasHorizontalScrollAncestor(t)) return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    touchActive = true;
+  }, { passive: true });
+
+  document.addEventListener('touchend', (e) => {
+    if (!touchActive) return;
+    touchActive = false;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - touchStartX;
+    const dy = t.clientY - touchStartY;
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    const idx = order.indexOf(currentTab);
+    if (idx < 0) return;
+    if (dx < 0 && idx < order.length - 1) setTab(order[idx + 1]);
+    else if (dx > 0 && idx > 0) setTab(order[idx - 1]);
+  }, { passive: true });
+})();
+
+function render() {
+  const v = $('#view'); v.innerHTML = '';
+  if (currentTab === 'home')      v.innerHTML = renderHome();
+  else if (currentTab === 'roster')    v.innerHTML = renderRoster();
+  else if (currentTab === 'transport') v.innerHTML = renderTransport();
+  else if (currentTab === 'more')      v.innerHTML = renderMore();
+  bindViewHandlers();
+}
+
+function renderHome() {
+  const total = totalRegistered();
+  const sess = sessionCounts();
+  const depts = deptCounts();
+  const feeTotal = Object.values(feeTotalByDept()).reduce((a,b)=>a+b, 0);
+  const fsTotal = DB.feeSupport.reduce((s, fs) => s + (fs.amount||0), 0);
+  const evCount = DB.evangelism.length;
+  const deptFees = feeTotalByDept();
+  const tStats = getTransportStats();
+
+  const lodgings = getLodgings();
+  const lodgingKeys = Object.keys(lodgings).sort();
+  let lodgingHtml = `<div class="card"><div class="card-head">
+      <div class="card-title">숙소별 명단</div>
+      <div style="display:flex; gap:8px;">
+        <button class="card-action" onclick="execPrintLodging()">인쇄</button>
+        <button class="card-action" data-action="goto-lodging">전체보기</button>
+      </div>
+    </div>`;
+  lodgingKeys.slice(0, 3).forEach(lk => {
+    const lList = lodgings[lk].sort((a,b)=>(a.zone||'').localeCompare(b.zone||'','ko'));
+    lodgingHtml += `
+      <div style="margin-top:12px; font-weight:700; color:var(--gold); font-size:13px;">${esc(lk)} (${lList.length}명)</div>
+      <div style="overflow-x:auto;">
+        <div class="roster-table" style="margin-bottom:0; min-width:400px; margin-top:6px;">
+          <div class="roster-row head" style="grid-template-columns: 28px 45px 60px 60px 1fr;"><div class="no">번호</div><div>구역</div><div>성명</div><div>회(부서)</div><div>비고</div></div>
+          ${lList.slice(0, 3).map((m, i) => `<div class="roster-row" style="grid-template-columns: 28px 45px 60px 60px 1fr;"><div class="no">${i+1}</div><div>${esc(m.zone)}</div><div class="nm">${esc(m.name)}</div><div>${esc(m.dept)}</div><div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(m.note)}</div></div>`).join('')}
+          ${lList.length > 3 ? `<div style="text-align:center; padding:6px; font-size:12px; color:var(--ink-mute);">...외 ${lList.length - 3}명</div>` : ''}
+        </div>
+      </div>
+    `;
+  });
+  if (lodgingKeys.length > 3) {
+    lodgingHtml += `<div style="text-align:center; padding:12px; font-size:12px; color:var(--ink-mute);">...외 ${lodgingKeys.length - 3}개 숙소 (전체보기 클릭)</div>`;
+  } else if (lodgingKeys.length === 0) {
+    lodgingHtml += `<div style="text-align:center; padding:15px; font-size:12px; color:var(--ink-mute);">등록된 인원이 없습니다.</div>`;
+  }
+  lodgingHtml += `</div>`;
+
+  return `
+    <div class="hero">
+      <div class="title">${esc(DB.meta.title)} <button class="card-action" onclick="execPrintHome()" style="float:right;font-size:12px">인쇄</button></div>
+      <div class="big">${total}<span class="unit">명 등록</span><span style="font-size:18px;color:var(--ink-soft);font-weight:600;margin-left:14px">· 전도대상자 <b style="color:var(--gold-soft);font-weight:800;font-size:22px">${evCount}</b><span style="font-size:15px;color:var(--ink-soft)">명</span></span></div>
+      <div class="sub">
+        <div class="sub-item">차수 <b>${esc(DB.meta.session||'2차')}</b></div>
+        <div class="sub-item">상행 <b>${esc(DB.meta.upTime)}</b></div>
+        <div class="sub-item">하행 <b>${esc(DB.meta.downTime)}</b></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div class="card-title">차수별 인원</div></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(72px, 1fr));gap:8px">
+        ${SESSIONS.map(s => `<div class="clickable" style="background:var(--bg-2);border-radius:10px;padding:10px 8px;text-align:center" onclick="openSessionSheet('${esc(s)}')"><div style="font-size:11px;color:var(--ink-mute)">${esc(s)}</div><div style="font-size:18px;font-weight:700;margin-top:2px">${sess[s]||0}</div></div>`).join('')}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">구역별 인원 <span style="color:var(--ink-mute);font-weight:500">·</span> 총 회비 <span style="color:var(--gold);font-weight:700">${won(feeTotal)}원</span></div>
+        <button class="card-action" data-action="goto-roster">명단</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(96px, 1fr));gap:8px">
+        ${ZONES.map(z => {
+          const ct = membersByZone(z).length;
+          const fee = feeTotalByZone(z);
+          return `<div class="clickable" style="background:var(--bg-2);border-radius:10px;padding:10px 8px;text-align:center" onclick="openZoneSheet('${esc(z)}')">
+            <div style="font-size:11px;color:var(--ink-mute)">${esc(z)}</div>
+            <div style="font-size:18px;font-weight:700;margin-top:2px">${ct}<span style="font-size:11px;color:var(--ink-mute);font-weight:500;margin-left:2px">명</span></div>
+            <div style="font-size:11px;color:var(--gold-soft);font-weight:600;margin-top:2px">${won(fee)}원</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div class="card-title">회별(부서별) 인원 및 회비</div></div>
+      <div class="roster-table" style="margin-bottom:0;">
+        <div class="roster-row head" style="grid-template-columns: 1fr 50px 80px 85px;"><div>회(부서)</div><div style="text-align:center">인원</div><div style="text-align:right">단가(회비)</div><div style="text-align:right; padding-right:10px;">합계</div></div>
+        ${DEPTS.map(d => `<div class="roster-row clickable" style="grid-template-columns: 1fr 50px 80px 85px;" onclick="openDeptSheet('${esc(d)}')"><div>${esc(d)}</div><div style="text-align:center">${depts[d]||0}명</div><div style="text-align:right;color:var(--ink-mute)">${won(DB.fees[d]||0)}</div><div style="text-align:right;font-weight:600;color:var(--gold-soft); padding-right:10px;">${won(deptFees[d]||0)}</div></div>`).join('')}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">전도대상자 명단 (${evCount}명)</div>
+        <div style="display:flex; gap:8px;">
+          <button class="card-action" onclick="execPrintEvangelism()">인쇄</button>
+          <button class="card-action" data-action="goto-evangelism">전체보기</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <div class="roster-table" style="margin-bottom:0; min-width:720px;">
+          <div class="roster-row head" style="grid-template-columns: 28px 40px 55px 50px 85px 50px 40px 32px 32px 1fr;"><div class="no">번호</div><div>구역</div><div>성명</div><div>회(부서)</div><div>숙소</div><div>인도자</div><div>관계</div><div>구원</div><div>침례</div><div>비고</div></div>
+          ${DB.evangelism.slice(0,5).map((e, i) => `<div class="roster-row" style="grid-template-columns: 28px 40px 55px 50px 85px 50px 40px 32px 32px 1fr;"><div class="no">${i+1}</div><div>${esc(e.zone)}</div><div class="nm">${esc(e.name)}</div><div>${esc(e.dept)}</div><div>${esc(e.lodging||'')}</div><div>${esc(e.leader)}</div><div>${esc(e.relation)}</div><div style="text-align:center;font-weight:700;color:var(--gold)">${e.salvation?'○':''}</div><div style="text-align:center;font-weight:700;color:var(--gold)">${e.baptism?'○':''}</div><div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(e.note)}</div></div>`).join('')}
+          ${evCount > 5 ? `<div style="text-align:center; padding:8px; font-size:12px; color:var(--ink-mute);">...외 ${evCount - 5}명</div>` : ''}
+          ${evCount === 0 ? `<div style="text-align:center; padding:15px; font-size:12px; color:var(--ink-mute);">등록된 전도대상자가 없습니다.</div>` : ''}
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">회비 지원 명단 (${DB.feeSupport.length}명 · <span style="color:var(--gold)">${won(fsTotal)}원</span>)</div>
+        <div style="display:flex; gap:8px;">
+          <button class="card-action" onclick="execPrintFeeSupport()">인쇄</button>
+          <button class="card-action" data-action="goto-fee-sheet">전체보기</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <div class="roster-table" style="margin-bottom:0; min-width:550px;">
+          <div class="roster-row head" style="grid-template-columns: 28px 45px 55px 60px 1fr 65px;"><div class="no">번호</div><div>구역</div><div>성명</div><div>회(부서)</div><div>비고</div><div style="text-align:right">금액</div></div>
+          ${DB.feeSupport.slice(0,5).map((fs, i) => `<div class="roster-row" style="grid-template-columns: 28px 45px 55px 60px 1fr 65px;"><div class="no">${i+1}</div><div>${esc(fs.zone)}</div><div class="nm">${esc(fs.name)}</div><div>${esc(fs.dept)}</div><div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(fs.note)}</div><div style="text-align:right; font-weight:700; color:var(--gold);">${won(fs.amount)}</div></div>`).join('')}
+          ${DB.feeSupport.length > 5 ? `<div style="text-align:center; padding:8px; font-size:12px; color:var(--ink-mute);">...외 ${DB.feeSupport.length - 5}명</div>` : ''}
+          ${DB.feeSupport.length === 0 ? `<div style="text-align:center; padding:15px; font-size:12px; color:var(--ink-mute);">회비 지원자가 없습니다.</div>` : ''}
+        </div>
+      </div>
+    </div>
+
+    ${lodgingHtml}
+
+    <div class="card">
+      <div class="card-head"><div class="card-title">차편 분포</div><button class="card-action" data-action="goto-transport">자세히</button></div>
+      <div class="dist-dual">
+        <div class="dist-col">
+          <div class="dist-col-title">상행</div>
+          ${tStats.up.length === 0
+            ? `<div style="font-size:12px;color:var(--ink-mute);padding:8px 0;">등록된 차편이 없습니다.</div>`
+            : tStats.up.map(([n, c]) => `<div class="bar-row"><div class="name">${n}</div><div class="bar"><div style="width:${(c/Math.max(1,...tStats.up.map(x=>x[1])))*100}%"></div></div><div class="count">${c}</div></div>`).join('')}
+        </div>
+        <div class="dist-col">
+          <div class="dist-col-title">하행</div>
+          ${tStats.down.length === 0
+            ? `<div style="font-size:12px;color:var(--ink-mute);padding:8px 0;">등록된 차편이 없습니다.</div>`
+            : tStats.down.map(([n, c]) => `<div class="bar-row"><div class="name">${n}</div><div class="bar"><div style="width:${(c/Math.max(1,...tStats.down.map(x=>x[1])))*100}%"></div></div><div class="count">${c}</div></div>`).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderLodgingSheet() {
+  const lodgings = getLodgings();
+  const lodgingKeys = Object.keys(lodgings).sort();
+  
+  let html = `
+    <div style="display:flex;gap:10px;margin-bottom:12px;">
+      <button class="btn btn-secondary btn-block" onclick="execPrintLodging()">인쇄 (2단 표기)</button>
+    </div>
+    <div style="overflow-x:auto;">
+  `;
+  lodgingKeys.forEach(lk => {
+    const lList = lodgings[lk].sort((a,b)=>(a.zone||'').localeCompare(b.zone||'','ko'));
+    html += `
+      <div style="margin-top:12px; font-weight:700; color:var(--gold); font-size:13px;">${esc(lk)} (${lList.length}명)</div>
+      <div class="roster-table" style="margin-bottom:0; min-width:400px; margin-top:6px;">
+        <div class="roster-row head" style="grid-template-columns: 28px 45px 60px 60px 1fr;"><div class="no">번호</div><div>구역</div><div>성명</div><div>회(부서)</div><div>비고</div></div>
+        ${lList.map((m, i) => `<div class="roster-row" style="grid-template-columns: 28px 45px 60px 60px 1fr;"><div class="no">${i+1}</div><div>${esc(m.zone)}</div><div class="nm">${esc(m.name)}</div><div>${esc(m.dept)}</div><div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(m.note)}</div></div>`).join('')}
+      </div>
+    `;
+  });
+  html += `</div>`;
+  openSheet('숙소별 명단 전체', html, null, { hideSave:true });
+}
+
+function buildMemberListHTML() {
+  const z = rosterFilter.zone;
+  const isAll = z === ALL_ZONES;
+  if (!isAll && !ZONES.includes(z)) { rosterFilter.zone = ALL_ZONES; return buildMemberListHTML(); }
+  const q = rosterFilter.q.toLowerCase().trim();
+  const matches = (m) => !q || (m.name||'').toLowerCase().includes(q) || (m.dept||'').toLowerCase().includes(q);
+
+  if (isAll) {
+    const totalList = DB.members.filter(matches);
+    if (totalList.length === 0) return `<div class="empty-state">${q ? '검색 결과 없음' : '등록된 인원이 없습니다.<br/><span style="font-size:12px;display:inline-block;margin-top:6px">우측 하단 + 버튼으로 새 인원을 추가하세요</span>'}</div>`;
+    let html = '';
+    ZONES.forEach(zn => {
+      const zList = totalList.filter(m => m.zone === zn);
+      if (zList.length === 0) return;
+      html += `<div style="margin:14px 4px 6px;font-size:12px;font-weight:700;letter-spacing:.02em;display:flex;align-items:center;gap:6px"><span style="color:var(--gold-soft)">${esc(zn)}</span><span style="color:var(--ink-mute);font-weight:500">${zList.length}명</span></div>`;
+      html += zList.map((m, i) => memberItemHTML(m, i+1)).join('');
+    });
+    const orphan = totalList.filter(m => !ZONES.includes(m.zone));
+    if (orphan.length > 0) {
+      html += `<div style="margin:14px 4px 6px;font-size:12px;font-weight:700;color:var(--rose)">미분류 (${orphan.length}명)</div>`;
+      html += orphan.map((m, i) => memberItemHTML(m, i+1)).join('');
+    }
+    return html;
+  } else {
+    const list = membersByZone(z).filter(matches);
+    if (list.length === 0) return `<div class="empty-state">${q ? '검색 결과 없음' : '해당 구역 인원이 없습니다.'}</div>`;
+    return list.map((m, i) => memberItemHTML(m, i+1)).join('');
+  }
+}
+
+function renderRoster() {
+  const z = rosterFilter.zone;
+  const isAll = z === ALL_ZONES;
+  return `
+    <div class="zone-scroll" id="zoneScroll">
+      <button class="zone-pill ${isAll?'active':''}" data-zone="${ALL_ZONES}">전체<span class="ct">${DB.members.length}</span></button>
+      ${ZONES.map(zn => `<button class="zone-pill ${zn===z?'active':''}" data-zone="${esc(zn)}">${esc(zn)}<span class="ct">${membersByZone(zn).length}</span></button>`).join('')}
+    </div>
+    <div class="searchbar">
+      <span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+      <input id="rosterSearch" placeholder="이름·부서 검색" value="${esc(rosterFilter.q)}"/>
+      <button class="btn-print" onclick="execPrintRoster()">인쇄</button>
+      ${isAll ? '' : `<button class="btn-reset" onclick="execResetZone()">초기화</button>`}
+    </div>
+    <div class="member-list" id="memberList">${buildMemberListHTML()}</div>
+    <button class="fab" id="btnAddMember" aria-label="인원 추가"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+  `;
+}
+
+function memberItemHTML(m, no) {
+  const chips = [];
+  if (m.session) chips.push(`<span class="chip">${esc(m.session)}</span>`);
+  if (m.transUp) chips.push(`<span class="chip gold">↑${esc(m.transUp)}</span>`);
+  if (m.transDown) chips.push(`<span class="chip indigo">↓${esc(m.transDown)}</span>`);
+  for (const [k, v] of Object.entries(m.extraUp || {})) if(v) chips.push(`<span class="chip green">${k}</span>`);
+  for (const [k, v] of Object.entries(m.extraDown || {})) if(v) chips.push(`<span class="chip green">${k}</span>`);
+  
+  return `
+    <div class="member-item" data-id="${esc(m.id)}">
+      <div class="no">${no}</div>
+      <div class="info">
+        <div class="name">${esc(m.name||'이름 미입력')}<span style="color:var(--ink-mute);font-weight:500;font-size:12px;margin-left:8px">${esc(m.dept||'')}</span></div>
+        <div class="meta">${chips.join('')}</div>
+      </div>
+    </div>
+  `;
+}
+
+function openMemberSheet(m, isNew=false) {
+  const existingEv = DB.evangelism.find(e => e.memberId === m.id || (e.name === m.name && e.name !== '' && e.zone === m.zone));
+  const existingFs = DB.feeSupport.find(f => f.memberId === m.id || (f.name === m.name && f.name !== '' && f.zone === m.zone));
+  
+  // 합류/이탈 시점 라디오: 본대 + EXTRA_UPS 항목들
+  // 현재 선택된 시점 파악 — extraUp에 값이 있으면 그 키, 아니면 '본대'
+  const activeUpKey = (() => {
+    const k = Object.keys(m.extraUp || {}).find(k => m.extraUp[k]);
+    return k || '본대';
+  })();
+  const activeDownKey = (() => {
+    const k = Object.keys(m.extraDown || {}).find(k => m.extraDown[k]);
+    return k || '본대';
+  })();
+  // 현재 시점의 차편 값
+  const activeUpVehicle = activeUpKey === '본대' ? (m.transUp||'') : (m.extraUp[activeUpKey]||'');
+  const activeDownVehicle = activeDownKey === '본대' ? (m.transDown||'') : (m.extraDown[activeDownKey]||'');
+
+  // 라디오 옵션 만들기 — 본대 + 기타 시점
+  const upTimeOptions = ['본대', ...EXTRA_UPS];
+  const downTimeOptions = ['본대', ...EXTRA_DOWNS];
+  function radioPills(name, options, active) {
+    return options.map(opt => `
+      <label class="time-pill ${opt===active?'active':''}">
+        <input type="radio" name="${name}" value="${esc(opt)}" ${opt===active?'checked':''}/>
+        <span>${esc(opt)}</span>
+      </label>
+    `).join('');
+  }
+
+  const html = `
+    <div class="row-2">
+      <div class="field"><label>구역</label><select id="mZone">${ZONES.map(z => `<option value="${esc(z)}" ${m.zone===z?'selected':''}>${esc(z)}</option>`).join('')}</select></div>
+      <div class="field"><label>부서(회)</label><select id="mDept"><option value="">선택</option>${DEPTS.map(d => `<option value="${esc(d)}" ${m.dept===d?'selected':''}>${esc(d)}</option>`).join('')}</select></div>
+    </div>
+    <div class="row-2">
+      <div class="field"><label>성명</label><input id="mName" value="${esc(m.name)}" placeholder="홍길동" autocomplete="off"/></div>
+      <div class="field"><label>차수</label><select id="mSession"><option value="">선택</option>${SESSIONS.map(s => `<option value="${esc(s)}" ${m.session===s?'selected':''}>${esc(s)}</option>`).join('')}</select></div>
+    </div>
+
+    <div class="section-title">추가 관리 항목</div>
+    <div class="row-2" style="background:var(--bg-2); padding:10px; border-radius:10px; margin-bottom:12px;">
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink);cursor:pointer;margin:0;"><input type="checkbox" id="mEvCheck" ${existingEv ? 'checked':''} /> 전도대상자 명단</label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink);cursor:pointer;margin:0;"><input type="checkbox" id="mFsCheck" ${existingFs ? 'checked':''} /> 회비지원 명단</label>
+    </div>
+
+    <div class="section-title">상행 (합류 시점)</div>
+    <div class="time-pill-row" data-group="up">
+      ${radioPills('mUpTime', upTimeOptions, activeUpKey)}
+    </div>
+    <div class="field"><label>상행 차편</label>
+      <select id="mUpVehicle">${TRANSPORT_EXTRA_OPTIONS.map(o => `<option value="${esc(o)}" ${activeUpVehicle===o?'selected':''}>${esc(o||'─')}</option>`).join('')}</select>
+    </div>
+
+    <div class="section-title">하행 (이탈 시점)</div>
+    <div class="time-pill-row" data-group="down">
+      ${radioPills('mDownTime', downTimeOptions, activeDownKey)}
+    </div>
+    <div class="field"><label>하행 차편</label>
+      <select id="mDownVehicle">${TRANSPORT_EXTRA_OPTIONS.map(o => `<option value="${esc(o)}" ${activeDownVehicle===o?'selected':''}>${esc(o||'─')}</option>`).join('')}</select>
+    </div>
+
+    <div class="section-title">인도자 / 숙소 / 비고</div>
+    <div class="notice" style="margin-top:-6px;">여기 기재된 인도자, 관계, 숙소 정보는 상단의 <b>'전도대상자 명단' 체크 시 자동으로 연동</b>됩니다.</div>
+    <div class="row-2">
+      <div class="field"><label>인도자</label><input id="mLeaderName" value="${esc(m.leaderName)}"/></div>
+      <div class="field"><label>관계</label><input id="mLeaderRel" value="${esc(m.leaderRel)}"/></div>
+    </div>
+    <div class="field"><label>숙소</label><input id="mLodging" value="${esc(m.lodging||'')}" placeholder="예: A동 101호"/></div>
+    <div class="field">
+      <label>구원 / 침례</label>
+      <div style="display:flex;gap:16px;padding:8px 4px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer">
+          <input type="checkbox" id="mSalvation" ${m.salvation ? 'checked':''}/> 구원
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer">
+          <input type="checkbox" id="mBaptism" ${m.baptism ? 'checked':''}/> 침례
+        </label>
+      </div>
+    </div>
+    <div class="field"><label>비고</label><textarea id="mNote" rows="2">${esc(m.note)}</textarea></div>
+    ${!isNew ? `<button class="btn btn-danger btn-block" id="mDelete" style="margin-top:8px">삭제</button>` : ''}
+  `;
+  openSheet(isNew ? '인원 추가' : '인원 편집', html, () => {
+    // 라디오 선택값 + 차편 셀렉트값 읽기
+    const upTime = (document.querySelector('input[name="mUpTime"]:checked') || {}).value || '본대';
+    const upVehicle = $('#mUpVehicle').value;
+    const downTime = (document.querySelector('input[name="mDownTime"]:checked') || {}).value || '본대';
+    const downVehicle = $('#mDownVehicle').value;
+
+    const updated = {
+      ...m, zone: $('#mZone').value, dept: $('#mDept').value, name: $('#mName').value.trim(), session: $('#mSession').value,
+      transUp: '', transDown: '',
+      extraUp: {}, extraDown: {},
+      leaderName: $('#mLeaderName').value.trim(), leaderRel: $('#mLeaderRel').value.trim(),
+      lodging: $('#mLodging').value.trim(),
+      salvation: $('#mSalvation').checked,
+      baptism: $('#mBaptism').checked,
+      note: $('#mNote').value.trim(),
+    };
+
+    // 상행 시점 분기
+    if (upTime === '본대') updated.transUp = upVehicle;
+    else updated.extraUp[upTime] = upVehicle;
+
+    // 하행 시점 분기
+    if (downTime === '본대') updated.transDown = downVehicle;
+    else updated.extraDown[downTime] = downVehicle;
+
+    if (!updated.name) { toast('성명을 입력해 주세요', true); return false; }
+
+    if (isNew) DB.members.push(updated);
+    else { const idx = DB.members.findIndex(x => x.id === m.id); if (idx >= 0) DB.members[idx] = updated; }
+
+    if ($('#mEvCheck').checked) {
+      if (!existingEv) {
+        DB.evangelism.push({...emptyEvangelism(), memberId: updated.id, name: updated.name, zone: updated.zone, dept: updated.dept, relation: updated.leaderRel, leader: updated.leaderName, lodging: updated.lodging, salvation: updated.salvation, baptism: updated.baptism, note: updated.note});
+      } else { 
+        existingEv.name = updated.name; existingEv.zone = updated.zone; existingEv.dept = updated.dept; 
+        existingEv.relation = updated.leaderRel; existingEv.leader = updated.leaderName; existingEv.lodging = updated.lodging; 
+        existingEv.salvation = updated.salvation; existingEv.baptism = updated.baptism;
+        existingEv.note = updated.note;
+      }
+    } else if (existingEv) { DB.evangelism = DB.evangelism.filter(e => e.id !== existingEv.id); }
+
+    if ($('#mFsCheck').checked) {
+      if (!existingFs) DB.feeSupport.push({...emptyFeeSupport(), memberId: updated.id, name: updated.name, zone: updated.zone, dept: updated.dept, amount: DB.fees[updated.dept]||0, note: updated.note});
+      else { existingFs.name = updated.name; existingFs.zone = updated.zone; existingFs.dept = updated.dept; existingFs.note = updated.note; }
+    } else if (existingFs) { DB.feeSupport = DB.feeSupport.filter(f => f.id !== existingFs.id); }
+
+    saveDB();
+    if (rosterFilter.zone !== ALL_ZONES) rosterFilter.zone = updated.zone;
+    render(); toast(isNew ? '추가됐어요' : '수정됐어요');
+  });
+
+  // 라디오 pill 클릭 시 active 시각 토글
+  setTimeout(() => {
+    document.querySelectorAll('.time-pill-row').forEach(group => {
+      group.addEventListener('change', (e) => {
+        if (e.target.type !== 'radio') return;
+        group.querySelectorAll('.time-pill').forEach(p => {
+          p.classList.toggle('active', p.querySelector('input').checked);
+        });
+      });
+    });
+  }, 30);
+
+  if (!isNew) {
+    setTimeout(() => { $('#mDelete').onclick = () => { confirmModal('삭제', `${m.name}을(를) 삭제합니다.`, () => { 
+      DB.members = DB.members.filter(x => x.id !== m.id); 
+      DB.evangelism = DB.evangelism.filter(x => x.memberId !== m.id && !(!x.memberId && x.name === m.name && x.zone === m.zone));
+      DB.feeSupport = DB.feeSupport.filter(x => x.memberId !== m.id && !(!x.memberId && x.name === m.name && x.zone === m.zone));
+      saveDB(); closeSheet(); render(); toast('삭제됐어요'); 
+    }); }; }, 50);
+  }
+}
+
+function driverList(driver, direction) {
+  return DB.members.filter(m => {
+    if (direction === 'up') {
+      if (m.transUp === '개인차' && (m.privateUp||'').trim() === driver) return true;
+      if (m.extraUp && Object.values(m.extraUp).includes(driver)) return true;
+    } else {
+      if (m.transDown === '개인차' && (m.privateDown||'').trim() === driver) return true;
+      if (m.extraDown && Object.values(m.extraDown).includes(driver)) return true;
+    }
+    return false;
+  });
+}
+
+function allPrivateDrivers() {
+  const set = new Set(PRIVATE_CAR_LIST);
+  const known = new Set([...BUSES, ...CHURCH_CARS, ...OTHER_TRANSPORTS, ...PRIVATE_CARS, '']);
+  DB.members.forEach(m => {
+    if (m.transUp === '개인차' && m.privateUp) set.add(m.privateUp.trim());
+    if (m.transDown === '개인차' && m.privateDown) set.add(m.privateDown.trim());
+    if (m.extraUp) Object.values(m.extraUp).forEach(v => { if (v && !known.has(v)) set.add(v); });
+    if (m.extraDown) Object.values(m.extraDown).forEach(v => { if (v && !known.has(v)) set.add(v); });
+  });
+  return Array.from(set).filter(s => s).sort((a,b)=>a.localeCompare(b,'ko'));
+}
+
+function renderTransport() {
+  const TYPES = [...BUSES, ...CHURCH_CARS, ...OTHER_TRANSPORTS, '개인차'];
+  let type = transportTab.type;
+  if (!TYPES.includes(type)) { transportTab.type = TYPES[0]; type = TYPES[0]; }
+
+  let html = `
+    <div class="transport-tabs" id="ttTabs" style="margin-top:10px;">
+      ${TYPES.map(t => `<button class="tt-pill ${t===type?'active':''}" data-t="${esc(t)}">${esc(t)}</button>`).join('')}
+    </div>
+    <div class="card">
+      <div class="card-head"><div class="card-title">${esc(type)} 탑승 명단</div><button class="card-action" onclick="execPrintTransport()">인쇄</button></div>
+  `;
+
+  if (type === '개인차') {
+    const drivers = allPrivateDrivers();
+    if (drivers.length === 0) {
+      html += `<div class="empty-state">등록된 개인차 차주가 없습니다.<br/><span style="font-size:12px">더보기 → 기초 데이터 설정 → '개인차 목록'에서 차주 이름을 등록하세요.</span></div>`;
+    } else {
+      let anyShown = false;
+      drivers.forEach(drv => {
+        const uList = driverList(drv, 'up');
+        const dList = driverList(drv, 'down');
+        if (uList.length > 0 || dList.length > 0) {
+          anyShown = true;
+          html += buildSplitTable(`🚗 ${esc(drv)}`, uList, dList, false);
+        }
+      });
+      if (!anyShown) html += `<div class="empty-state">표시할 명단이 없습니다.</div>`;
+    }
+  } else if (BUSES.includes(type)) {
+    const uList = DB.members.filter(m => m.transUp === type).sort((a,b)=>(a.zone||'').localeCompare(b.zone||'','ko'));
+    const dList = DB.members.filter(m => m.transDown === type).sort((a,b)=>(a.zone||'').localeCompare(b.zone||'','ko'));
+    html += buildSplitTable(null, uList, dList, false);
+  } else {
+    const uList = DB.members.filter(m => m.transUp === type || Object.values(m.extraUp||{}).includes(type)).sort((a,b)=>(a.zone||'').localeCompare(b.zone||'','ko'));
+    const dList = DB.members.filter(m => m.transDown === type || Object.values(m.extraDown||{}).includes(type)).sort((a,b)=>(a.zone||'').localeCompare(b.zone||'','ko'));
+    if (uList.length === 0 && dList.length === 0) html += `<div class="empty-state">해당 차편 등록자가 없습니다.</div>`;
+    else html += buildSplitTable(null, uList, dList, false);
+  }
+
+  html += `</div>`;
+  return html;
+}
+
+function renderFeeSupportSheet() {
+  const fsTotal = DB.feeSupport.reduce((s, fs) => s + (fs.amount||0), 0);
+  const html = `
+    <div style="background:linear-gradient(135deg, rgba(255,200,87,.15), rgba(255,200,87,.05));border:1px solid rgba(255,200,87,.3);border-radius:12px;padding:12px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:11px;color:var(--ink-mute)">지원금액 합계</div>
+        <div style="font-size:22px;font-weight:800;color:var(--gold);letter-spacing:-.02em;margin-top:2px">${won(fsTotal)}<span style="font-size:13px;color:var(--ink-mute);font-weight:500;margin-left:3px">원</span></div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:11px;color:var(--ink-mute)">인원</div>
+        <div style="font-size:18px;font-weight:700">${DB.feeSupport.length}<span style="font-size:12px;color:var(--ink-mute);margin-left:2px">명</span></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:12px;">
+      <button class="btn btn-secondary" onclick="execPrintFeeSupport()" style="flex:1">인쇄</button>
+      <button class="btn btn-primary" id="fsAdd" style="flex:2">+ 지원자 추가</button>
+    </div>
+    <div style="overflow-x:auto;">
+      <div class="roster-table" style="margin-bottom:0; min-width:550px;">
+        <div class="roster-row head" style="grid-template-columns: 28px 45px 55px 60px 1fr 65px;"><div class="no">번호</div><div>구역</div><div>성명</div><div>회(부서)</div><div>비고</div><div style="text-align:right">금액</div></div>
+        ${DB.feeSupport.length === 0 ? `<div style="text-align:center; padding:20px; font-size:12px; color:var(--ink-mute);">등록된 데이터가 없습니다.</div>` : 
+          DB.feeSupport.map((fs, i) => `<div class="roster-row clickable" data-fs-id="${esc(fs.id)}" style="grid-template-columns: 28px 45px 55px 60px 1fr 65px;"><div class="no">${i+1}</div><div>${esc(fs.zone)}</div><div class="nm">${esc(fs.name)}</div><div>${esc(fs.dept)}</div><div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(fs.note)}</div><div style="text-align:right; font-weight:700; color:var(--gold);">${won(fs.amount)}</div></div>`).join('')}
+      </div>
+    </div>
+  `;
+  openSheet('회비 지원 명단', html, null, { hideSave:true });
+  setTimeout(() => {
+    $('#fsAdd').onclick = () => { closeSheet(true); setTimeout(() => openFeeSupportSheet(emptyFeeSupport(), true), 300); };
+    $$('[data-fs-id]').forEach(el => el.onclick = () => {
+      const fs = DB.feeSupport.find(x => x.id === el.dataset.fsId);
+      if (fs) { closeSheet(true); setTimeout(() => openFeeSupportSheet(fs, false), 300); }
+    });
+  }, 50);
+}
+
+function openMetaEditSheet() {
+  const events = listEvents();
+  const html = `
+    <div class="notice">현재 활성 행사를 수정하거나, 새 행사를 추가하고 전환할 수 있습니다.</div>
+    <div class="field">
+      <label>행사 선택 (현재 활성 행사)</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select id="evSwitch" style="flex:1">
+          ${events.map(e => `<option value="${esc(e.id)}" ${e.id===VAULT.activeId?'selected':''}>${esc(e.meta.title)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="helper">드롭다운에서 과거 행사를 선택하면 그 데이터로 전환됩니다.</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <button class="btn btn-secondary" id="btnEvNew" style="flex:1;min-width:90px">새 행사 추가</button>
+      <button class="btn btn-danger" id="btnEvDelete" style="flex:1;min-width:90px">행사 삭제</button>
+    </div>
+    <div style="height:1px;background:var(--line-soft);margin:14px 0"></div>
+    <div class="field">
+      <label>행사명 (년도 포함)</label>
+      <input id="metaTitle" value="${esc(DB.meta.title)}" placeholder="예: 2026년 하계수양회"/>
+    </div>
+    <div class="field">
+      <label>차수 (홈 화면 요약용)</label>
+      <input id="metaSession" value="${esc(DB.meta.session||'2차')}" placeholder="예: 2차"/>
+    </div>
+    <div class="field">
+      <label>상행 일정</label>
+      <input id="metaUp" value="${esc(DB.meta.upTime)}" placeholder="예: 7월 17일(금) 오전 8시"/>
+    </div>
+    <div class="field">
+      <label>하행 일정</label>
+      <input id="metaDown" value="${esc(DB.meta.downTime)}" placeholder="예: 7월 19일(주일) 오전 10시"/>
+    </div>
+  `;
+  openSheet('행사 정보 수정', html, () => {
+    const t = $('#metaTitle').value.trim();
+    const s = $('#metaSession').value.trim();
+    const u = $('#metaUp').value.trim();
+    const d = $('#metaDown').value.trim();
+    if (!t) { toast('행사명을 입력해 주세요', true); return false; }
+    DB.meta.title = t;
+    DB.meta.session = s;
+    DB.meta.upTime = u;
+    DB.meta.downTime = d;
+    saveDB(); render(); toast('행사 정보가 수정됐어요');
+  });
+
+  // 행사 전환/추가/삭제 핸들러
+  setTimeout(() => {
+    const sel = $('#evSwitch');
+    if (sel) {
+      sel.onchange = (e) => {
+        const newId = e.target.value;
+        if (newId === VAULT.activeId) return;
+        // 현재 화면의 메타 입력값을 먼저 저장
+        const t = $('#metaTitle').value.trim();
+        if (t) {
+          DB.meta.title = t;
+          DB.meta.session = $('#metaSession').value.trim();
+          DB.meta.upTime = $('#metaUp').value.trim();
+          DB.meta.downTime = $('#metaDown').value.trim();
+          saveVault();
+        }
+        closeSheet(true);
+        switchEvent(newId);
+        setTimeout(() => { openMetaEditSheet(); toast('행사가 전환되었습니다'); }, 250);
+      };
+    }
+    const btnNew = $('#btnEvNew');
+    if (btnNew) {
+      btnNew.onclick = () => {
+        confirmModal('새 행사 추가', '새 행사를 만들고 빈 데이터로 시작합니다. 현재 행사는 그대로 보존됩니다.', () => {
+          // 현재 메타 저장
+          const t = $('#metaTitle').value.trim();
+          if (t) {
+            DB.meta.title = t;
+            DB.meta.session = $('#metaSession').value.trim();
+            DB.meta.upTime = $('#metaUp').value.trim();
+            DB.meta.downTime = $('#metaDown').value.trim();
+            saveVault();
+          }
+          closeSheet(true);
+          // 기본 행사명 — 현재 년도 + 1로 추정
+          const yearMatch = (DB.meta.title || '').match(/(\d{4})/);
+          const nextYear = yearMatch ? (parseInt(yearMatch[1], 10) + 1) : new Date().getFullYear();
+          createEvent(`${nextYear}년 하계수양회`);
+          setTimeout(() => { openMetaEditSheet(); toast('새 행사가 추가되었습니다'); }, 250);
+        }, '추가');
+      };
+    }
+    const btnDel = $('#btnEvDelete');
+    if (btnDel) {
+      btnDel.onclick = () => {
+        if (listEvents().length <= 1) { toast('마지막 남은 행사는 삭제할 수 없습니다', true); return; }
+        confirmModal('행사 삭제', `"${DB.meta.title}" 행사를 완전히 삭제합니다. 등록된 모든 인원·차편·회비 데이터가 함께 사라집니다. 되돌릴 수 없습니다.`, () => {
+          const idToDelete = VAULT.activeId;
+          closeSheet(true);
+          deleteEvent(idToDelete);
+          setTimeout(() => { openMetaEditSheet(); toast('행사가 삭제되었습니다'); }, 250);
+        }, '삭제');
+      };
+    }
+  }, 80);
+}
+
+function openFeeRateSheet() {
+  const html = `
+    <div class="notice">부서별로 받을 회비 단가를 수정합니다.</div>
+    ${DEPTS.map(d => `<div class="field"><label>${esc(d)}</label><input type="number" class="fee-rate" data-dept="${esc(d)}" value="${DB.fees[d]||0}"/></div>`).join('')}
+  `;
+  openSheet('회비 단가 수정', html, () => {
+    $$('.fee-rate').forEach(el => DB.fees[el.dataset.dept] = parseInt(el.value, 10) || 0);
+    saveDB(); render(); toast('단가가 수정됐어요');
+  });
+}
+
+function openFeeSupportSheet(fs, isNew=false) {
+  const html = `
+    <div class="row-2">
+      <div class="field"><label>구역</label><select id="fsZone">${ZONES.map(z => `<option value="${esc(z)}" ${fs.zone===z?'selected':''}>${esc(z)}</option>`).join('')}</select></div>
+      <div class="field"><label>부서(회)</label><select id="fsDept"><option value="">선택</option>${DEPTS.map(d => `<option value="${esc(d)}" ${fs.dept===d?'selected':''}>${esc(d)}</option>`).join('')}</select></div>
+    </div>
+    <div class="field"><label>성명</label><input id="fsName" value="${esc(fs.name)}"/></div>
+    <div class="field"><label>지원 금액</label><input id="fsAmount" type="number" value="${fs.amount||0}"/></div>
+    <div class="field"><label>비고</label><input id="fsNote" value="${esc(fs.note)}"/></div>
+    ${!isNew ? `<button class="btn btn-danger btn-block" id="fsDelete" style="margin-top:8px">삭제</button>` : ''}
+  `;
+  openSheet(isNew ? '회비 지원 추가' : '회비 지원 편집', html, () => {
+    const updated = {...fs, zone: $('#fsZone').value, dept: $('#fsDept').value, name: $('#fsName').value.trim(), amount: parseInt($('#fsAmount').value,10)||0, note: $('#fsNote').value.trim()};
+    if(isNew) DB.feeSupport.push(updated); else { const i=DB.feeSupport.findIndex(x=>x.id===fs.id); if(i>=0) DB.feeSupport[i]=updated; }
+    saveDB(); render(); toast('저장됐어요');
+  });
+  if (!isNew) { setTimeout(() => { $('#fsDelete').onclick = () => { DB.feeSupport = DB.feeSupport.filter(x => x.id !== fs.id); saveDB(); closeSheet(); render(); }; }, 50); }
+}
+
+async function downloadFile(file) {
+  // 1차 시도: File System Access API — Chrome/Edge/Android PWA에서 폴더 지정 가능
+  // showSaveFilePicker는 사용자가 폴더+파일명을 직접 지정해서 저장
+  if (typeof window.showSaveFilePicker === 'function') {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: file.name,
+        types: [{
+          description: 'JSON 백업 파일',
+          accept: { 'application/json': ['.json'] },
+        }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(file);
+      await writable.close();
+      toast('백업 파일이 저장되었습니다.');
+      return;
+    } catch (e) {
+      // 사용자가 취소했거나 권한 거부 — 일반 다운로드로 폴백
+      if (e && e.name === 'AbortError') { return; } // 사용자가 취소
+      console.warn('FS Access API failed, fallback:', e);
+    }
+  }
+  // 2차 폴백: 일반 다운로드 (브라우저가 폴더 지정 불가하므로
+  // 파일명에 "Retreat App_" 접두사를 붙여 다운로드 폴더에서 한곳에 모이도록 함)
+  const url = URL.createObjectURL(file);
+  const a = document.createElement('a'); a.href = url; a.download = file.name;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+  toast('"다운로드" 폴더에 저장되었습니다. (Retreat App_ 접두사로 구분)');
+}
+
+function shareApp() {
+  if (navigator.share) {
+    navigator.share({ title: '하계수양회 등록 관리', text: '스마트폰에 앱으로 추가하여 사용해보세요.', url: window.location.href.split('#')[0] }).catch(e => console.log('Share canceled'));
+  } else {
+    prompt('아래 링크를 복사하여 공유하세요.', window.location.href.split('#')[0]);
+  }
+}
+
+function shareDataFile() {
+  const dataStr = JSON.stringify(DB);
+  const blob = new Blob([dataStr], {type: 'application/json'});
+  // 파일명: "Retreat App_수양회데이터_YYYY-MM-DD.json"
+  const fname = `Retreat App_수양회데이터_${new Date().toISOString().slice(0,10)}.json`;
+  const file = new File([blob], fname, {type: 'application/json'});
+
+  if (navigator.share && navigator.canShare && navigator.canShare({files: [file]})) {
+    navigator.share({ files: [file], title: '수양회 데이터 백업', text: '수양회 등록 데이터 백업 파일입니다.' })
+    .catch(e => { console.log(e); downloadFile(file); });
+  } else { downloadFile(file); }
+}
+
+function renderMore() {
+  return `
+    <div class="card">
+      <div class="card-head"><div class="card-title">데이터 통합 공유</div></div>
+      <div class="menu-list">
+        <button class="menu-item" onclick="shareApp()">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></div>
+          <div class="lb"><div class="t">앱 링크 공유하기</div><div class="d">초기 빈 상태의 앱 설치 링크 전송</div></div>
+        </button>
+        <button class="menu-item" onclick="shareDataFile()">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+          <div class="lb"><div class="t">데이터 백업 및 공유</div><div class="d">현재 등록된 데이터를 파일로 추출/전송</div></div>
+        </button>
+        <button class="menu-item" onclick="$('#jsonInput').click()">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+          <div class="lb"><div class="t">데이터 복원하기</div><div class="d">공유받은 백업 파일(.json) 불러오기</div></div>
+        </button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div class="card-title">행사 기초 설정</div></div>
+      <div class="menu-list">
+        <button class="menu-item" data-action="edit-meta">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+          <div class="lb"><div class="t">행사 정보 수정</div><div class="d">행사명, 년도, 차수, 상·하행 일정</div></div>
+        </button>
+        <button class="menu-item" data-action="base-settings">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
+          <div class="lb"><div class="t">구역, 차수, 차량, 추가 일정 목록 수정</div><div class="d">선택 가능한 데이터 목록을 변경합니다.</div></div>
+        </button>
+        <button class="menu-item" onclick="openFeeRateSheet()">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+          <div class="lb"><div class="t">부서별 회비 단가 설정</div><div class="d">각 부서의 회비 단가를 수정합니다.</div></div>
+        </button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div class="card-title">엑셀 변환 작업</div></div>
+      <div class="menu-list">
+        <button class="menu-item" data-action="import">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+          <div class="lb"><div class="t">엑셀 가져오기</div><div class="d">기존 수양회 서식 xlsx 불러오기</div></div>
+        </button>
+        <button class="menu-item" data-action="export">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+          <div class="lb"><div class="t">엑셀로 내보내기</div><div class="d">모든 데이터를 파일로 저장합니다.</div></div>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function openBaseSettingsSheet() {
+  const html = `
+    <div class="notice">목록은 콤마(,)로 구분하여 입력해주세요.</div>
+    <div class="field"><label>구역 목록</label><textarea id="sZones" rows="2">${ZONES.join(', ')}</textarea></div>
+    <div class="field"><label>차수 목록</label><textarea id="sSessions" rows="2">${SESSIONS.join(', ')}</textarea></div>
+    <div class="field"><label>본대 버스 목록</label><textarea id="sBuses" rows="2">${BUSES.join(', ')}</textarea></div>
+    <div class="field"><label>교회차 목록</label><textarea id="sChurch" rows="2">${CHURCH_CARS.join(', ')}</textarea></div>
+    <div class="field"><label>기타 차편 목록</label><textarea id="sOther" rows="2" placeholder="예: 타교회, 대중교통, 자전거">${OTHER_TRANSPORTS.join(', ')}</textarea><div class="helper">본대 외 차편의 옵션. 필요한 항목을 자유롭게 추가/수정하세요.</div></div>
+    <div class="field"><label>개인차 목록 (차주 이름)</label><textarea id="sPrivateCarList" rows="2" placeholder="예: 김장로, 박집사, 이형제">${PRIVATE_CAR_LIST.join(', ')}</textarea><div class="helper">여기 등록한 이름들이 기타 일정 교통편 옵션에 자동으로 추가됩니다.</div></div>
+    <div class="field"><label>기타 일정(상행) (기본: 금저)</label><textarea id="sExtraUps" rows="2">${EXTRA_UPS.join(', ')}</textarea></div>
+    <div class="field"><label>기타 일정(하행) (기본: 토저)</label><textarea id="sExtraDowns" rows="2">${EXTRA_DOWNS.join(', ')}</textarea></div>
+  `;
+  openSheet('기초 데이터 설정', html, () => {
+    ZONES = $('#sZones').value.split(',').map(s=>s.trim()).filter(Boolean);
+    SESSIONS = $('#sSessions').value.split(',').map(s=>s.trim()).filter(Boolean);
+    BUSES = $('#sBuses').value.split(',').map(s=>s.trim()).filter(Boolean);
+    CHURCH_CARS = $('#sChurch').value.split(',').map(s=>s.trim()).filter(Boolean);
+    OTHER_TRANSPORTS = $('#sOther').value.split(',').map(s=>s.trim()).filter(Boolean);
+    PRIVATE_CAR_LIST = $('#sPrivateCarList').value.split(',').map(s=>s.trim()).filter(Boolean);
+    EXTRA_UPS = $('#sExtraUps').value.split(',').map(s=>s.trim()).filter(Boolean);
+    EXTRA_DOWNS = $('#sExtraDowns').value.split(',').map(s=>s.trim()).filter(Boolean);
+    
+    updateTransportOptions();
+    DB.settings = { zones: ZONES, sessions: SESSIONS, buses: BUSES, churchCars: CHURCH_CARS, otherTransports: OTHER_TRANSPORTS, extraUps: EXTRA_UPS, extraDowns: EXTRA_DOWNS, privateCarList: PRIVATE_CAR_LIST };
+    saveDB(); render(); toast('기초 설정이 반영되었습니다.');
+  });
+}
+
+function renderEvangelismSheet() {
+  const html = `
+    <div style="display:flex;gap:10px;margin-bottom:12px;">
+      <button class="btn btn-secondary" onclick="execPrintEvangelism()" style="flex:1">인쇄</button>
+      <button class="btn btn-primary" id="evAdd" style="flex:2">+ 대상자 추가</button>
+    </div>
+    <div style="overflow-x:auto;">
+      <div class="roster-table" style="min-width:640px;">
+        <div class="roster-row head" style="grid-template-columns: 28px 40px 55px 50px 85px 50px 40px 1fr;"><div class="no">번호</div><div>구역</div><div>성명</div><div>회(부서)</div><div>숙소</div><div>인도자</div><div>관계</div><div>비고</div></div>
+        ${DB.evangelism.map((e, i) => `<div class="roster-row clickable" data-ev-id="${esc(e.id)}" style="grid-template-columns: 28px 40px 55px 50px 85px 50px 40px 1fr;"><div class="no">${i+1}</div><div>${esc(e.zone)}</div><div class="nm">${esc(e.name)}</div><div>${esc(e.dept)}</div><div>${esc(e.lodging||'')}</div><div>${esc(e.leader)}</div><div>${esc(e.relation)}</div><div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(e.note)}</div></div>`).join('')}
+        ${DB.evangelism.length === 0 ? `<div style="text-align:center; padding:20px; font-size:12px; color:var(--ink-mute);">등록된 데이터가 없습니다.</div>` : ''}
+      </div>
+    </div>
+  `;
+  openSheet('전도대상자 명단 전체', html, null, { hideSave:true });
+  setTimeout(() => {
+    $('#evAdd').onclick = () => { closeSheet(true); setTimeout(() => openEvangelismEdit(emptyEvangelism(), true), 300); };
+    $$('[data-ev-id]').forEach(el => el.onclick = () => {
+      const e = DB.evangelism.find(x => x.id === el.dataset.evId);
+      if (e) { closeSheet(true); setTimeout(() => openEvangelismEdit(e, false), 300); }
+    });
+  }, 50);
+}
+
+function openEvangelismEdit(e, isNew) {
+  const html = `
+    <div class="row-2">
+      <div class="field"><label>구역</label><select id="eZone">${ZONES.map(z => `<option value="${esc(z)}" ${e.zone===z?'selected':''}>${esc(z)}</option>`).join('')}</select></div>
+      <div class="field"><label>부서(회)</label><select id="eDept"><option value="">선택</option>${DEPTS.map(d => `<option value="${esc(d)}" ${e.dept===d?'selected':''}>${esc(d)}</option>`).join('')}</select></div>
+    </div>
+    <div class="row-2">
+      <div class="field"><label>성명</label><input id="eName" value="${esc(e.name)}"/></div>
+      <div class="field"><label>관계</label><input id="eRel" value="${esc(e.relation)}"/></div>
+    </div>
+    <div class="row-2">
+      <div class="field"><label>인도자</label><input id="eLeader" value="${esc(e.leader)}"/></div>
+      <div class="field"><label>숙소</label><input id="eLodging" value="${esc(e.lodging||'')}"/></div>
+    </div>
+    <div class="field"><label>비고</label><textarea id="eNote" rows="2">${esc(e.note)}</textarea></div>
+    ${!isNew ? `<button class="btn btn-danger btn-block" id="eDelete" style="margin-top:8px">삭제</button>` : ''}
+  `;
+  openSheet(isNew ? '전도대상자 추가' : '전도대상자 편집', html, () => {
+    const updated = {...e, zone: $('#eZone').value, dept: $('#eDept').value, name: $('#eName').value.trim(), relation: $('#eRel').value.trim(), leader: $('#eLeader').value.trim(), lodging: $('#eLodging').value.trim(), note: $('#eNote').value.trim()};
+    if (isNew) DB.evangelism.push(updated); else { const idx = DB.evangelism.findIndex(x => x.id === e.id); if (idx >= 0) DB.evangelism[idx] = updated; }
+    saveDB(); closeSheet(true); setTimeout(renderEvangelismSheet, 300); toast('저장됐어요'); return false;
+  });
+  if (!isNew) { setTimeout(() => { $('#eDelete').onclick = () => { DB.evangelism = DB.evangelism.filter(x => x.id !== e.id); saveDB(); closeSheet(true); setTimeout(renderEvangelismSheet, 300); }; }, 50); }
+}
+
+$('#fileInput').onchange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array' });
+    importFromWorkbook(wb);
+    toast('가져오기 완료');
+    render();
+  } catch (err) { console.error(err); toast('가져오기 실패: ' + err.message, true); }
+  e.target.value = '';
+};
+
+$('#jsonInput').onchange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const imported = JSON.parse(ev.target.result);
+      if (imported && imported.members) {
+        DB = Object.assign(freshDB(), imported);
+        saveDB(); render(); toast('데이터 복원이 완료되었습니다.');
+      } else throw new Error('Invalid format');
+    } catch(err) { toast('잘못된 백업 파일입니다.', true); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+};
+
+function importFromWorkbook(wb) {
+  const newMembers = [];
+  ZONES.forEach(z => {
+    const ws = wb.Sheets[z];
+    if (!ws) return;
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, blankrows: false, defval: '' });
+    for (let i = 3; i < rows.length; i++) {
+      const r = rows[i];
+      const name = (r[3] || '').toString().trim();
+      if (!name) continue;
+      
+      const extraUp = {}; const extraDown = {};
+      if (r[7]) extraUp[EXTRA_UPS[0] || '금저'] = r[7].toString().trim();
+      if (r[8]) extraDown[EXTRA_DOWNS[0] || '토저'] = r[8].toString().trim();
+
+      newMembers.push({
+        id: uid(), zone: z, dept: (r[2]||'').toString().trim(), name, session: (r[4]||'').toString().trim(),
+        transUp: (r[5]||'').toString().trim(), transDown: (r[6]||'').toString().trim(),
+        privateUp: (r[9]||'').toString().trim(), privateDown: (r[10]||'').toString().trim(),
+        leaderName: (r[11]||'').toString().trim(), leaderRel: (r[12]||'').toString().trim(), note: (r[13]||'').toString().trim(),
+        extraUp, extraDown
+      });
+    }
+  });
+
+  const newEv = [];
+  const evWs = wb.Sheets['전도대상자'];
+  if (evWs) {
+    const rows = XLSX.utils.sheet_to_json(evWs, { header: 1, blankrows: false, defval: '' });
+    for (let i = 2; i < rows.length; i++) {
+      const r = rows[i];
+      const name = (r[3]||'').toString().trim();
+      if (!name) continue;
+      newEv.push({
+        id: uid(), memberId: '', zone: (r[1]||'').toString().trim(), dept: (r[2]||'').toString().trim(), name,
+        relation: (r[4]||'').toString().trim(), leader: (r[5]||'').toString().trim(), lodging: (r[6]||'').toString().trim(),
+        salvation: '', baptism: '', note: (r[8]||'').toString().trim(),
+      });
+    }
+  }
+
+  const newFS = [];
+  const fsWs = wb.Sheets['회비지원'];
+  if (fsWs) {
+    const rows = XLSX.utils.sheet_to_json(fsWs, { header: 1, blankrows: false, defval: '' });
+    for (let i = 2; i < rows.length; i++) {
+      const r = rows[i];
+      const name = (r[3]||'').toString().trim();
+      if (!name) continue;
+      newFS.push({
+        id: uid(), memberId: '', zone: (r[1]||'').toString().trim(), dept: (r[2]||'').toString().trim(), name,
+        amount: parseInt((r[4]||0).toString().replace(/[^0-9-]/g,''), 10) || 0, note: (r[5]||'').toString().trim(),
+      });
+    }
+  }
+
+  if (newMembers.length > 0) DB.members = newMembers;
+  if (newEv.length > 0) DB.evangelism = newEv;
+  if (newFS.length > 0) DB.feeSupport = newFS;
+  syncEvFsLinks();
+  saveDB();
+}
+
+/* ===== 엑셀 내보내기 — 템플릿 ZIP을 직접 패치 (스타일·공식 100% 보존) =====
+   원리: xlsx는 ZIP. 각 sheet은 xl/worksheets/sheetN.xml에 들어 있고
+   셀은 <c r="B4" s="7"/> 형태. 값을 넣을 때 inlineStr 형식으로 셀 노드만 교체.
+   styles.xml, sharedStrings.xml, theme 등은 손대지 않음 → 모든 디자인 그대로. */
+
+async function exportToExcel() {
+  const title = DB.meta.title || '하계수양회';
+
+  // 1) 템플릿 fetch
+  let zip;
+  try {
+    const res = await fetch('template.xlsx');
+    if (!res.ok) throw new Error('template fetch failed: ' + res.status);
+    const buf = await res.arrayBuffer();
+    // JSZip은 SheetJS 번들에 포함돼 있어요 (XLSX.JSZip로 사용 가능)
+    const JSZip = (typeof window !== 'undefined' && window.JSZip) || (XLSX && XLSX.JSZip);
+    if (!JSZip) { toast('JSZip을 사용할 수 없어요', true); return; }
+    zip = await JSZip.loadAsync(buf);
+  } catch (e) {
+    console.error(e);
+    toast('서식 파일(template.xlsx)을 불러올 수 없어요. 페이지 새로고침 후 다시 시도해주세요.', true);
+    return;
+  }
+
+  // 2) 시트 이름 → sheet 파일 번호 매핑 추출 (workbook.xml + workbook.xml.rels)
+  const wbXml = await zip.file('xl/workbook.xml').async('string');
+  const relsXml = await zip.file('xl/_rels/workbook.xml.rels').async('string');
+  // rId → 파일경로
+  const relMap = {};
+  [...relsXml.matchAll(/<Relationship[^>]+Id="(rId\d+)"[^>]+Target="([^"]+)"/g)].forEach(m => relMap[m[1]] = m[2]);
+  // 시트 이름 → 파일 경로
+  const nameToFile = {};
+  [...wbXml.matchAll(/<sheet[^>]+name="([^"]+)"[^>]+r:id="(rId\d+)"/g)].forEach(m => {
+    nameToFile[m[1]] = 'xl/' + relMap[m[2]];
+  });
+
+  // 3) 셀 패치 함수 — XML 안의 <c r="X#" .../> 셀 노드를 새 값으로 교체
+  function escapeXml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function patchSheet(xml, edits) {
+    // edits: { 'B4': '값', 'C4': '값' }
+    for (const [addr, value] of Object.entries(edits)) {
+      const re = new RegExp(`<c r="${addr}"([^/>]*?)(/>|>[\\s\\S]*?</c>)`, 'g');
+      xml = xml.replace(re, (match, attrs) => {
+        // attrs 안의 t="..."를 제거하고, 우리 형식으로 새로 설정
+        const cleanAttrs = attrs.replace(/\s*t="[^"]*"/g, '');
+        if (value === '' || value === null || value === undefined) {
+          return `<c r="${addr}"${cleanAttrs}/>`;
+        }
+        if (typeof value === 'number' && isFinite(value)) {
+          return `<c r="${addr}"${cleanAttrs} t="n"><v>${value}</v></c>`;
+        }
+        return `<c r="${addr}"${cleanAttrs} t="inlineStr"><is><t xml:space="preserve">${escapeXml(value)}</t></is></c>`;
+      });
+    }
+    return xml;
+  }
+
+  async function patchSheetFile(name, edits) {
+    const path = nameToFile[name];
+    if (!path) { console.warn('Sheet missing:', name); return; }
+    let xml = await zip.file(path).async('string');
+    xml = patchSheet(xml, edits);
+    zip.file(path, xml);
+  }
+
+  // 4) 구역 시트 (8개) — 4행~43행에 데이터
+  for (const z of ZONES) {
+    const ms = membersByZone(z);
+    const edits = {};
+    for (let i = 0; i < 40; i++) {
+      const m = ms[i];
+      const row = 4 + i;
+      edits[`A${row}`] = i + 1;
+      edits[`B${row}`] = m ? z : '';
+      edits[`C${row}`] = m ? (m.dept||'') : '';
+      edits[`D${row}`] = m ? (m.name||'') : '';
+      edits[`E${row}`] = m ? (m.session||'') : '';
+      edits[`F${row}`] = m ? (m.transUp||'') : '';
+      edits[`G${row}`] = m ? (m.transDown||'') : '';
+      // H/I: 기타 일정(본대 아닌 합류/이탈) — "시점 차편" 형식
+      if (m) {
+        const euKey = Object.keys(m.extraUp || {}).find(k => m.extraUp[k]);
+        const edKey = Object.keys(m.extraDown || {}).find(k => m.extraDown[k]);
+        edits[`H${row}`] = euKey ? `${euKey} ${m.extraUp[euKey]}` : '';
+        edits[`I${row}`] = edKey ? `${edKey} ${m.extraDown[edKey]}` : '';
+      } else {
+        edits[`H${row}`] = ''; edits[`I${row}`] = '';
+      }
+      edits[`J${row}`] = m ? (m.privateUp||'') : '';
+      edits[`K${row}`] = m ? (m.privateDown||'') : '';
+      edits[`L${row}`] = m ? (m.leaderName||'') : '';
+      edits[`M${row}`] = m ? (m.leaderRel||'') : '';
+      edits[`N${row}`] = m ? (m.note||'') : '';
+    }
+    await patchSheetFile(z, edits);
+  }
+
+  // 5) 전도대상자 — 3행부터
+  {
+    const edits = {};
+    for (let i = 0; i < 40; i++) {
+      const e = DB.evangelism[i];
+      const row = 3 + i;
+      edits[`A${row}`] = i + 1;
+      edits[`B${row}`] = e ? (e.zone||'') : '';
+      edits[`C${row}`] = e ? (e.dept||'') : '';
+      edits[`D${row}`] = e ? (e.name||'') : '';
+      edits[`E${row}`] = e ? (e.relation||'') : '';
+      edits[`F${row}`] = e ? (e.leader||'') : '';
+      edits[`G${row}`] = e ? (e.lodging||'') : '';
+      edits[`I${row}`] = e ? (e.note||'') : '';
+    }
+    await patchSheetFile('전도대상자', edits);
+  }
+
+  // 6) 회비지원 — 3행부터, E열은 VLOOKUP 공식이라 건드리지 않음
+  {
+    const edits = {};
+    for (let i = 0; i < 80; i++) {
+      const fs = DB.feeSupport[i];
+      const row = 3 + i;
+      edits[`A${row}`] = i + 1;
+      edits[`B${row}`] = fs ? (fs.zone||'') : '';
+      edits[`C${row}`] = fs ? (fs.dept||'') : '';  // C가 채워지면 E열 VLOOKUP이 자동 계산
+      edits[`D${row}`] = fs ? (fs.name||'') : '';
+      edits[`F${row}`] = fs ? (fs.note||'') : '';
+    }
+    // 사용자가 설정한 회비 단가를 J/K 룩업 테이블에 반영
+    const lookupDepts = ['은장회','봉사회','어머니회','청년회','대학부','중고등부','초등부','유치부','미취학'];
+    lookupDepts.forEach((dept, i) => {
+      const row = 3 + i;
+      if (DB.fees && DB.fees[dept] !== undefined) edits[`K${row}`] = DB.fees[dept];
+    });
+    await patchSheetFile('회비지원', edits);
+  }
+
+  // 7) 생성된 ZIP을 Blob으로 저장
+  const out = await zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' });
+  const fname = `${title.replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.xlsx`;
+  const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const file = new File([blob], fname, { type: blob.type });
+
+  if (typeof window.showSaveFilePicker === 'function') {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: fname,
+        types: [{ description: 'Excel 파일', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] } }],
+      });
+      const w = await handle.createWritable();
+      await w.write(file); await w.close();
+      toast('엑셀 파일이 저장됐어요');
+      return;
+    } catch (err) {
+      if (err && err.name === 'AbortError') return;
+    }
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = fname;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+  toast('엑셀로 저장됐어요');
+}
+
+function bindViewHandlers() {
+  $$('[data-action="goto-transport"]').forEach(b => b.onclick = () => setTab('transport'));
+  $$('[data-action="goto-roster"]').forEach(b => b.onclick = () => setTab('roster'));
+  $$('[data-action="goto-evangelism"]').forEach(b => b.onclick = renderEvangelismSheet);
+  $$('[data-action="goto-lodging"]').forEach(b => b.onclick = renderLodgingSheet);
+  $$('[data-action="goto-fee-sheet"]').forEach(b => b.onclick = renderFeeSupportSheet);
+  $$('#zoneScroll .zone-pill').forEach(p => p.onclick = () => { rosterFilter.zone = p.dataset.zone; render(); });
+  
+  const search = $('#rosterSearch');
+  if (search) {
+    search.oninput = () => {
+      rosterFilter.q = search.value;
+      const ml = $('#memberList');
+      if (ml) {
+        ml.innerHTML = buildMemberListHTML();
+        $$('#memberList .member-item').forEach(item => item.onclick = () => { const m = DB.members.find(x => x.id === item.dataset.id); if (m) openMemberSheet(m, false); });
+      }
+    };
+  }
+  $$('.member-item[data-id]').forEach(item => item.onclick = () => { const m = DB.members.find(x => x.id === item.dataset.id); if (m) openMemberSheet(m, false); });
+  const addBtn = $('#btnAddMember');
+  if (addBtn) addBtn.onclick = () => {
+    const startZone = (rosterFilter.zone === ALL_ZONES) ? ZONES[0] : rosterFilter.zone;
+    openMemberSheet(emptyMember(startZone), true);
+  };
+  $$('#ttTabs .tt-pill').forEach(b => b.onclick = () => { transportTab.type = b.dataset.t; render(); });
+  $$('[data-action="base-settings"]').forEach(b => b.onclick = openBaseSettingsSheet);
+  $$('[data-action="edit-meta"]').forEach(b => b.onclick = (e) => { e.stopPropagation(); openMetaEditSheet(); });
+  $$('[data-action="import"]').forEach(b => b.onclick = () => $('#fileInput').click());
+  $$('[data-action="export"]').forEach(b => b.onclick = exportToExcel);
+  
+  const exitBtn = $('#btnExit');
+  if (exitBtn) {
+    exitBtn.onclick = () => {
+      confirmModal('앱 종료', '앱을 종료하시겠습니까? (저장된 데이터는 그대로 유지됩니다)', () => {
+        // PWA standalone에서는 window.close() 가 허용됨. 일반 브라우저 탭에서는 보안상 막힘
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+          || window.navigator.standalone === true;
+        try {
+          window.close();
+        } catch(e) { /* noop */ }
+        // close() 가 실패하는 일반 브라우저 환경에서는 안내 — 한 박자 뒤 토스트
+        setTimeout(() => {
+          if (!document.hidden) {
+            if (isStandalone) {
+              toast('앱이 종료되지 않으면 홈 버튼을 눌러 빠져나가세요.');
+            } else {
+              toast('브라우저 탭을 닫거나 다른 페이지로 이동해 주세요.');
+            }
+          }
+        }, 250);
+      }, '종료');
+    };
+  }
+}
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', async () => {
+    try {
+      const reg = await navigator.serviceWorker.register('sw.js', { scope: './' });
+      console.log('SW registered, scope:', reg.scope);
+      // 새 버전이 발견되면 다음 진입 시 사용. 사용자에게 알리지는 않음 (Stale-While-Revalidate)
+      reg.addEventListener('updatefound', () => console.log('SW update found'));
+      // 강제 갱신 체크 (앱이 깨어날 때마다)
+      if (reg.update) reg.update().catch(()=>{});
+    } catch (err) {
+      console.error('SW register failed:', err);
+    }
+  });
+  // 페이지 가시성이 돌아오면(앱 다시 열림) SW 업데이트 체크
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      navigator.serviceWorker.getRegistration().then(r => r && r.update && r.update().catch(()=>{}));
+    }
+  });
+}
+render();
+</script>
+</body>
+</html>
