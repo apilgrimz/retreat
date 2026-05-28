@@ -689,42 +689,17 @@ function buildSplitTable(title, uList, dList, isPrint=false) {
 }
 
 function buildPrintDocument(title, bodyHtml) {
-  // 모든 인쇄 페이지 하단 중앙에 들어갈 부산중부교회 로고 (SVG 인라인 — 외부 파일/네트워크 의존 없음)
-  const logoSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 90" width="220" height="55" preserveAspectRatio="xMidYMid meet">
-    <defs><radialGradient id="g1" cx="35%" cy="35%" r="65%">
-      <stop offset="0%" stop-color="#5a8fd6"/><stop offset="60%" stop-color="#2c5fa8"/><stop offset="100%" stop-color="#1a3f7a"/>
-    </radialGradient></defs>
-    <circle cx="40" cy="45" r="34" fill="url(#g1)"/>
-    <ellipse cx="40" cy="45" rx="34" ry="11" fill="none" stroke="#7fb0e8" stroke-width="0.8" opacity="0.6"/>
-    <ellipse cx="40" cy="45" rx="34" ry="22" fill="none" stroke="#7fb0e8" stroke-width="0.8" opacity="0.5"/>
-    <ellipse cx="40" cy="45" rx="11" ry="34" fill="none" stroke="#7fb0e8" stroke-width="0.8" opacity="0.6"/>
-    <ellipse cx="40" cy="45" rx="22" ry="34" fill="none" stroke="#7fb0e8" stroke-width="0.8" opacity="0.5"/>
-    <line x1="6" y1="45" x2="74" y2="45" stroke="#7fb0e8" stroke-width="0.9" opacity="0.7"/>
-    <g fill="#fff">
-      <path d="M 18 38 Q 22 28 34 30 Q 44 31 50 38 Q 52 42 49 45 Q 45 48 40 47 L 35 50 Q 30 52 26 50 L 22 52 Q 19 52 18 49 Q 16 44 18 38 Z"/>
-      <circle cx="50" cy="36" r="4.5"/>
-      <path d="M 53 35 L 58 34 L 53 37 Z" fill="#f7a948"/>
-      <path d="M 28 32 Q 22 22 14 22 Q 18 28 22 34 Q 25 38 28 36 Z"/>
-      <path d="M 32 34 Q 28 24 22 20 Q 26 30 30 38 Z" opacity="0.85"/>
-      <path d="M 18 46 Q 12 50 8 52 Q 12 50 16 50 Q 18 49 19 47 Z"/>
-    </g>
-    <circle cx="51" cy="35.5" r="0.7" fill="#1a3f7a"/>
-    <text x="85" y="32" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif" font-size="14" font-weight="500" fill="#222">대한예수교</text>
-    <text x="85" y="50" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif" font-size="14" font-weight="500" fill="#222">침례회</text>
-    <text x="155" y="60" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif" font-size="40" font-weight="900" fill="#111" letter-spacing="-1.5">부산중부교회</text>
-  </svg>`;
-
   return `<!DOCTYPE html>
 <html lang="ko"><head>
 <meta charset="utf-8"/>
 <title>${esc(title)}</title>
 <style>
-  @page { size: A4 portrait; margin: 12mm 10mm 22mm 10mm; }
+  @page { size: A4 portrait; margin: 12mm 10mm; }
   * { box-sizing: border-box; }
   html, body { background: #fff; color: #000; margin: 0; padding: 0;
     font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
     -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  body { padding: 4mm 4mm 60px 4mm; }
+  body { padding: 4mm; }
   .print-title { text-align: center; font-size: 18px; font-weight: 700; margin: 0 0 12px; padding-bottom: 6px; border-bottom: 2px solid #000; }
   .print-section { margin-top: 14px; }
   .print-section-title { font-size: 13px; font-weight: 700; margin: 12px 0 6px; padding: 4px 6px; background: #eee; border-left: 4px solid #000; }
@@ -763,9 +738,6 @@ function buildPrintDocument(title, bodyHtml) {
   .stat-cell .val { font-size: 16px; font-weight: 700; margin-top: 2px; }
   .stat-cell .sub { font-size: 10px; color: #b8860b; font-weight: 700; margin-top: 1px; }
   .meta-row { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 8px; color: #333; }
-  /* 페이지 하단 중앙 로고 */
-  .print-footer-logo { position: fixed; bottom: 8mm; left: 0; right: 0; text-align: center; }
-  .print-footer-logo svg { display: inline-block; }
   @media print { .no-print { display: none; } }
 </style>
 <script>
@@ -776,10 +748,7 @@ function buildPrintDocument(title, bodyHtml) {
   };
 <\/script>
 </head>
-<body>
-${bodyHtml}
-<div class="print-footer-logo">${logoSvg}</div>
-</body></html>`;
+<body>${bodyHtml}</body></html>`;
 }
 
 function doPrint(title, bodyHtml) {
@@ -1000,20 +969,29 @@ function execPrintEvangelism() {
     <td>${esc(e.lodging||'')}</td>
     <td style="white-space:nowrap;">${esc(e.leader)}</td>
     <td style="white-space:nowrap;">${esc(e.relation)}</td>
+    <td style="font-weight:700;">${e.salvation?'○':''}</td>
+    <td style="font-weight:700;">${e.baptism?'○':''}</td>
     <td class="tl">${esc(e.note)}</td>
   </tr>`).join('');
-  if (!trs) trs = `<tr><td colspan="8" style="padding:20px; color:#666">등록된 전도대상자가 없습니다.</td></tr>`;
+  if (!trs) trs = `<tr><td colspan="10" style="padding:20px; color:#666">등록된 전도대상자가 없습니다.</td></tr>`;
 
   const body = `<div class="print-title">${titleText}</div>
-    <table class="print-table" style="font-size:10px;">
+    <table class="print-table" style="font-size:10px;table-layout:fixed;">
+      <colgroup>
+        <col style="width:4%"><col style="width:7%"><col style="width:9%"><col style="width:10%">
+        <col style="width:14%"><col style="width:9%"><col style="width:7%">
+        <col style="width:7%"><col style="width:7%"><col style="width:26%">
+      </colgroup>
       <thead><tr>
-        <th style="width:25px">번호</th>
-        <th style="width:40px">구역</th>
-        <th style="width:50px">성명</th>
-        <th style="width:55px">회(부서)</th>
-        <th style="width:85px">숙소</th>
-        <th style="width:50px">인도자</th>
-        <th style="width:40px">관계</th>
+        <th>번호</th>
+        <th>구역</th>
+        <th>성명</th>
+        <th>회(부서)</th>
+        <th>숙소</th>
+        <th>인도자</th>
+        <th>관계</th>
+        <th>구원</th>
+        <th>침례</th>
         <th>비고</th>
       </tr></thead>
       <tbody>${trs}</tbody>
