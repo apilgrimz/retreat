@@ -1587,6 +1587,17 @@ function openMemberSheet(m, isNew=false) {
   const activeUpVehicle = activeUpKey === '본대' ? (m.transUp||'') : (m.extraUp[activeUpKey]||'');
   const activeDownVehicle = activeDownKey === '본대' ? (m.transDown||'') : (m.extraDown[activeDownKey]||'');
 
+  // 본대 선택 시 호차 목록, 그 외 시점 선택 시 (교회차+개인차+타교회+대중교통) 목록
+  function vehicleOptionsFor(timeKey) {
+    if (timeKey === '본대') return ['', ...BUSES];
+    return ['', ...CHURCH_CARS, ...OTHER_TRANSPORTS, ...PRIVATE_CAR_LIST];
+  }
+  function vehicleSelectHtml(timeKey, active) {
+    return vehicleOptionsFor(timeKey).map(o =>
+      `<option value="${esc(o)}" ${active===o?'selected':''}>${esc(o||'─')}</option>`
+    ).join('');
+  }
+
   // 라디오 옵션 만들기 — 본대 + 기타 시점
   const upTimeOptions = ['본대', ...EXTRA_UPS];
   const downTimeOptions = ['본대', ...EXTRA_DOWNS];
@@ -1620,7 +1631,7 @@ function openMemberSheet(m, isNew=false) {
       ${radioPills('mUpTime', upTimeOptions, activeUpKey)}
     </div>
     <div class="field"><label>상행 차편</label>
-      <select id="mUpVehicle">${TRANSPORT_EXTRA_OPTIONS.map(o => `<option value="${esc(o)}" ${activeUpVehicle===o?'selected':''}>${esc(o||'─')}</option>`).join('')}</select>
+      <select id="mUpVehicle">${vehicleSelectHtml(activeUpKey, activeUpVehicle)}</select>
     </div>
 
     <div class="section-title">하행 (이탈 시점)</div>
@@ -1628,7 +1639,7 @@ function openMemberSheet(m, isNew=false) {
       ${radioPills('mDownTime', downTimeOptions, activeDownKey)}
     </div>
     <div class="field"><label>하행 차편</label>
-      <select id="mDownVehicle">${TRANSPORT_EXTRA_OPTIONS.map(o => `<option value="${esc(o)}" ${activeDownVehicle===o?'selected':''}>${esc(o||'─')}</option>`).join('')}</select>
+      <select id="mDownVehicle">${vehicleSelectHtml(activeDownKey, activeDownVehicle)}</select>
     </div>
 
     <div class="section-title">인도자 / 숙소 / 비고</div>
@@ -1704,7 +1715,7 @@ function openMemberSheet(m, isNew=false) {
     render(); toast(isNew ? '추가됐어요' : '수정됐어요');
   });
 
-  // 라디오 pill 클릭 시 active 시각 토글
+  // 라디오 pill 클릭 시 active 시각 토글 + 셀렉트 옵션 재구성
   setTimeout(() => {
     document.querySelectorAll('.time-pill-row').forEach(group => {
       group.addEventListener('change', (e) => {
@@ -1712,6 +1723,16 @@ function openMemberSheet(m, isNew=false) {
         group.querySelectorAll('.time-pill').forEach(p => {
           p.classList.toggle('active', p.querySelector('input').checked);
         });
+        const newTime = e.target.value;
+        const isUp = group.dataset.group === 'up';
+        const sel = document.getElementById(isUp ? 'mUpVehicle' : 'mDownVehicle');
+        if (sel) {
+          // 현재 선택값이 새 옵션 목록에 있는지 확인
+          const prev = sel.value;
+          const opts = vehicleOptionsFor(newTime);
+          const keep = opts.includes(prev) ? prev : '';
+          sel.innerHTML = vehicleSelectHtml(newTime, keep);
+        }
       });
     });
   }, 30);
