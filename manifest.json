@@ -2,7 +2,7 @@
   "name": "하계수양회 등록 관리",
   "short_name": "수양회",
   "description": "교회 하계수양회 등록·차량·회비·전도 통합 관리",
-  "start_url": "./index.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",

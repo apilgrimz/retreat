@@ -1,6 +1,6 @@
 // 하계수양회 PWA Service Worker
 // v1.0.9 — 모바일 안정성 강화: HTML 캐시 우선, 네트워크 차단/호스팅 다운 시에도 동작
-const CACHE_VERSION = 'retreat-v1.0.28';
+const CACHE_VERSION = 'retreat-v1.0.30';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -22,6 +22,14 @@ self.addEventListener('install', (event) => {
     await Promise.all(CORE_ASSETS.map(async (url) => {
       try { await cache.add(url); } catch (e) { console.warn('Core skip:', url, e.message); }
     }));
+    // index.html을 './' 키로도 동시에 저장 → 어떤 경로로 와도 매칭되도록
+    try {
+      const indexRes = await cache.match('./index.html');
+      if (indexRes) {
+        await cache.put('./', indexRes.clone());
+        await cache.put('index.html', indexRes.clone());
+      }
+    } catch(e) { console.warn('alias cache skip', e); }
     // CDN은 옵셔널
     await Promise.all(CDN_ASSETS.map(async (url) => {
       try { await cache.add(url); } catch (e) { console.warn('CDN skip:', url, e.message); }
@@ -52,31 +60,39 @@ self.addEventListener('fetch', (event) => {
     (req.headers.get('accept') || '').includes('text/html');
 
   // HTML/네비게이션 요청 — 캐시 우선, 네트워크는 백그라운드 갱신
-  // (호스팅이 다운되거나 모바일이 인터넷에 연결 안 됐을 때도 앱이 열림)
+  // 어떤 경로로 들어와도(./, ./index.html, /index.html 등) 동일한 index.html 응답 반환
   if (isHTML) {
     event.respondWith((async () => {
       const cache = await caches.open(CACHE_VERSION);
-      // 1) 캐시에서 index.html 찾기 (가장 안전한 fallback)
-      const cached = await cache.match('./index.html') || await cache.match('./') || await cache.match(req);
-      // 2) navigationPreload가 있다면 그것도 시도
+      // 캐시에서 index.html 찾기 — 가능한 모든 키 시도 (상대/절대)
+      const cacheKeys = ['./index.html', './', 'index.html', '/', new URL('./index.html', self.registration.scope).href];
+      let cached = null;
+      for (const key of cacheKeys) {
+        cached = await cache.match(key);
+        if (cached) break;
+      }
+      if (!cached) cached = await cache.match(req); // 마지막 수단
+
+      // navigationPreload (있다면)
       const preload = event.preloadResponse ? event.preloadResponse.catch(() => null) : Promise.resolve(null);
-      // 3) 네트워크 시도 (백그라운드 갱신용)
+      // 네트워크 시도 (백그라운드 갱신용)
       const network = fetch(req).then((res) => {
         if (res && res.ok) {
-          cache.put('./index.html', res.clone()).catch(()=>{});
+          // 새 응답을 모든 가능한 키로 캐시에 저장 → 다음 번엔 어떤 경로로 와도 hit
+          const clone = res.clone();
+          cache.put('./index.html', clone).catch(()=>{});
         }
         return res;
       }).catch(() => null);
 
-      // 캐시 있으면 즉시 반환 (백그라운드로 갱신은 계속)
-      if (cached) {
-        // 네트워크가 빠르면 더 신선한 응답으로 갱신만 시키고 즉시 캐시 반환
-        return cached;
-      }
-      // 캐시 없음 → preload나 네트워크 응답 시도
+      // 캐시가 있으면 즉시 반환 (네트워크는 백그라운드)
+      if (cached) return cached;
+
+      // 캐시 없음 → preload 또는 네트워크
       const fresh = (await preload) || (await network);
       if (fresh) return fresh;
-      // 정말 아무것도 없음 → 최소한의 오프라인 페이지
+
+      // 최후 fallback
       return new Response(
         '<!doctype html><html lang="ko"><meta charset="utf-8"><title>오프라인</title>' +
         '<body style="font-family:sans-serif;padding:20px;text-align:center"><h2>연결 실패</h2>' +

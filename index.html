@@ -921,7 +921,7 @@ function execPrintTransport() {
 }
 
 function execPrintSession(session) {
-  const list = DB.members.filter(m => m.session === session).sort((a,b)=>(a.zone||'').localeCompare(b.zone||'','ko'));
+  const list = DB.members.filter(m => (m.session||"").split(",").map(x=>x.trim()).includes(session)).sort((a,b)=>(a.zone||'').localeCompare(b.zone||'','ko'));
   const titleText = `${getYearPrefix()} 하계수양회 - ${session} 명단`;
   let trs = list.map((m, i) => {
     let up = m.transUp || ''; let down = m.transDown || '';
@@ -1170,7 +1170,7 @@ $('#sheetCancel').onclick = () => closeSheet(); $('#sheetBackdrop').onclick = ()
 $('#sheetSave').onclick = () => { if (sheetHandlers.save) { if (sheetHandlers.save() !== false) closeSheet(); } else closeSheet(); };
 
 function openSessionSheet(session) {
-  const list = DB.members.filter(m => m.session === session).sort((a,b)=>(a.zone||'').localeCompare(b.zone||'','ko'));
+  const list = DB.members.filter(m => (m.session||"").split(",").map(x=>x.trim()).includes(session)).sort((a,b)=>(a.zone||'').localeCompare(b.zone||'','ko'));
   let html = `
     <div style="display:flex;gap:10px;margin-bottom:12px;">
       <button class="btn btn-secondary btn-block" onclick="execPrintSession('${esc(session)}')">인쇄</button>
@@ -1248,7 +1248,12 @@ function membersByZone(zone) { return DB.members.filter(m => m.zone === zone); }
 function totalRegistered() { return DB.members.length; }
 function sessionCounts() {
   const r = Object.fromEntries(SESSIONS.map(s => [s, 0]));
-  DB.members.forEach(m => { if (r.hasOwnProperty(m.session)) r[m.session]++; }); return r;
+  DB.members.forEach(m => {
+    (m.session||'').split(',').map(x=>x.trim()).filter(Boolean).forEach(s => {
+      if (r.hasOwnProperty(s)) r[s]++;
+    });
+  });
+  return r;
 }
 function deptCounts() {
   const r = Object.fromEntries(DEPTS.map(d => [d, 0]));
@@ -1615,9 +1620,18 @@ function openMemberSheet(m, isNew=false) {
       <div class="field"><label>구역</label><select id="mZone">${ZONES.map(z => `<option value="${esc(z)}" ${m.zone===z?'selected':''}>${esc(z)}</option>`).join('')}</select></div>
       <div class="field"><label>부서(회)</label><select id="mDept"><option value="">선택</option>${DEPTS.map(d => `<option value="${esc(d)}" ${m.dept===d?'selected':''}>${esc(d)}</option>`).join('')}</select></div>
     </div>
-    <div class="row-2">
-      <div class="field"><label>성명</label><input id="mName" value="${esc(m.name)}" placeholder="홍길동" autocomplete="off"/></div>
-      <div class="field"><label>차수</label><select id="mSession"><option value="">선택</option>${SESSIONS.map(s => `<option value="${esc(s)}" ${m.session===s?'selected':''}>${esc(s)}</option>`).join('')}</select></div>
+    <div class="field"><label>성명</label><input id="mName" value="${esc(m.name)}" placeholder="홍길동" autocomplete="off"/></div>
+    <div class="field">
+      <label>차수 <span style="font-weight:400;color:var(--ink-mute);font-size:11px">(복수 선택 가능)</span></label>
+      <div class="time-pill-row" id="mSessionRow">
+        ${SESSIONS.map(s => {
+          const selected = (m.session||'').split(',').map(x=>x.trim()).includes(s);
+          return `<label class="time-pill ${selected?'active':''}">
+            <input type="checkbox" name="mSession" value="${esc(s)}" ${selected?'checked':''}/>
+            <span>${esc(s)}</span>
+          </label>`;
+        }).join('')}
+      </div>
     </div>
 
     <div class="section-title">추가 관리 항목</div>
@@ -1670,8 +1684,12 @@ function openMemberSheet(m, isNew=false) {
     const downTime = (document.querySelector('input[name="mDownTime"]:checked') || {}).value || '본대';
     const downVehicle = $('#mDownVehicle').value;
 
+    // 차수 — 체크된 항목들을 콤마로 결합
+    const sessionValues = Array.from(document.querySelectorAll('input[name="mSession"]:checked')).map(el => el.value);
+    const sessionStr = sessionValues.join(', ');
+
     const updated = {
-      ...m, zone: $('#mZone').value, dept: $('#mDept').value, name: $('#mName').value.trim(), session: $('#mSession').value,
+      ...m, zone: $('#mZone').value, dept: $('#mDept').value, name: $('#mName').value.trim(), session: sessionStr,
       transUp: '', transDown: '',
       extraUp: {}, extraDown: {},
       leaderName: $('#mLeaderName').value.trim(), leaderRel: $('#mLeaderRel').value.trim(),
@@ -1715,23 +1733,26 @@ function openMemberSheet(m, isNew=false) {
     render(); toast(isNew ? '추가됐어요' : '수정됐어요');
   });
 
-  // 라디오 pill 클릭 시 active 시각 토글 + 셀렉트 옵션 재구성
+  // 라디오/체크박스 pill 클릭 시 active 시각 토글 + (시점 그룹만) 셀렉트 옵션 재구성
   setTimeout(() => {
     document.querySelectorAll('.time-pill-row').forEach(group => {
       group.addEventListener('change', (e) => {
-        if (e.target.type !== 'radio') return;
+        if (e.target.type !== 'radio' && e.target.type !== 'checkbox') return;
+        // 모든 pill의 active 상태 재계산
         group.querySelectorAll('.time-pill').forEach(p => {
           p.classList.toggle('active', p.querySelector('input').checked);
         });
-        const newTime = e.target.value;
-        const isUp = group.dataset.group === 'up';
-        const sel = document.getElementById(isUp ? 'mUpVehicle' : 'mDownVehicle');
-        if (sel) {
-          // 현재 선택값이 새 옵션 목록에 있는지 확인
-          const prev = sel.value;
-          const opts = vehicleOptionsFor(newTime);
-          const keep = opts.includes(prev) ? prev : '';
-          sel.innerHTML = vehicleSelectHtml(newTime, keep);
+        // 시점(상행/하행) 라디오일 때만 차편 셀렉트 재구성
+        if (e.target.type === 'radio' && (group.dataset.group === 'up' || group.dataset.group === 'down')) {
+          const newTime = e.target.value;
+          const isUp = group.dataset.group === 'up';
+          const sel = document.getElementById(isUp ? 'mUpVehicle' : 'mDownVehicle');
+          if (sel) {
+            const prev = sel.value;
+            const opts = vehicleOptionsFor(newTime);
+            const keep = opts.includes(prev) ? prev : '';
+            sel.innerHTML = vehicleSelectHtml(newTime, keep);
+          }
         }
       });
     });
