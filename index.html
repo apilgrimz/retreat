@@ -815,19 +815,16 @@ function rosterPrintRowsHtml(list, startNo, mode, opts) {
     const col3 = showZone ? esc(m.zone) : esc(m.dept);
     return `<tr>
       <td>${startNo + i}</td><td class="print-name">${esc(m.name)}</td><td>${col3}</td>
-      <td>${esc(m.session)}</td><td class="tl trans-cell">${esc(transStr)}</td>
+      <td style="white-space:nowrap;font-size:10px;">${esc(m.session)}</td><td class="tl trans-cell">${esc(transStr)}</td>
       <td>${esc(m.lodging||'')}</td><td class="tl note-cell">${esc(m.note)}</td>
     </tr>`;
   }).join('');
   if (!trs) trs = `<tr><td colspan="7" style="padding:20px; color:#666;">등록된 인원이 없습니다.</td></tr>`;
-  // 비율(합=100):
-  //   zone(구역별): 교통 27 / 숙소 20 / 비고 25  → 비고 넓게
-  //   dept(회별) : 교통 38 / 숙소 18 / 비고 14  → 교통 넓게
-  //   all (전체) : 교통 34 / 숙소 22 / 비고 15
+  // 비율(합=100) — 차수 칸을 넓혀 "1차, 3차" 복수 차수도 한 줄에:
   let cols;
-  if (mode === 'zone')      cols = `<col style="width:6%"><col style="width:10%"><col style="width:9%"><col style="width:6%"><col style="width:27%"><col style="width:17%"><col style="width:25%">`;
-  else if (mode === 'dept') cols = `<col style="width:5%"><col style="width:10%"><col style="width:9%"><col style="width:6%"><col style="width:32%"><col style="width:18%"><col style="width:20%">`;
-  else                      cols = `<col style="width:5%"><col style="width:8%"><col style="width:10%"><col style="width:6%"><col style="width:34%"><col style="width:22%"><col style="width:15%">`;
+  if (mode === 'zone')      cols = `<col style="width:5%"><col style="width:10%"><col style="width:9%"><col style="width:11%"><col style="width:26%"><col style="width:15%"><col style="width:24%">`;
+  else if (mode === 'dept') cols = `<col style="width:5%"><col style="width:10%"><col style="width:8%"><col style="width:11%"><col style="width:31%"><col style="width:15%"><col style="width:20%">`;
+  else                      cols = `<col style="width:5%"><col style="width:8%"><col style="width:9%"><col style="width:11%"><col style="width:32%"><col style="width:18%"><col style="width:17%">`;
   return `<table class="print-table" style="table-layout:fixed">
     <colgroup>${cols}</colgroup>
     <thead><tr>
@@ -1309,8 +1306,8 @@ $$('.tabbar button').forEach(b => b.onclick = () => setTab(b.dataset.tab));
     if ($('#sheet') && $('#sheet').classList.contains('show')) return;
     if ($('#modal') && $('#modal').classList.contains('show')) return;
     const t = e.target;
-    // 입력/버튼/스크롤 가능 컨테이너 위에선 스와이프 무시
-    if (t.closest('input,select,textarea,button,.zone-scroll,.transport-tabs')) return;
+    // 입력/셀렉트/가로스크롤 컨테이너 위에선 스와이프 무시 (버튼은 제외 — 더보기 탭이 버튼 천지라 스와이프 막힘)
+    if (t.closest('input,select,textarea,.zone-scroll,.transport-tabs')) return;
     // 가로 스크롤 가능한 영역(전도대상자/회비지원 등 카드 내부 표) 위에선 무시
     if (hasHorizontalScrollAncestor(t)) return;
     touchStartX = e.touches[0].clientX;
@@ -2047,6 +2044,120 @@ function shareApp() {
   }
 }
 
+/* ===== JSONBin 클라우드 동기화 ===== */
+// 무료 Master Key — 읽기/쓰기용. 교회 명단(민감정보 없음)이라 공개 코드 방식 사용.
+const JSONBIN_KEY = '$2a$10$.oA/jPyXL1kzKt5.w.0kcOsqw/mBjTiu6I6Ozd8nCQB4O5N3fDBnC';
+const JSONBIN_BASE = 'https://api.jsonbin.io/v3';
+
+// 활성 행사에 클라우드 binId 저장 필드
+function getActiveBinId() { return DB.cloudBinId || ''; }
+
+async function cloudUpload() {
+  if (JSONBIN_KEY.includes('REPLACE_WITH')) {
+    toast('JSONBin 키가 설정되지 않았어요. 안내를 확인해 주세요.', true);
+    return;
+  }
+  toast('클라우드에 올리는 중…');
+  // 행사 데이터를 통째로 payload로 (vault가 아닌 활성 행사 1건)
+  const payload = { type: 'retreat-event', savedAt: Date.now(), event: DB };
+  const existingBin = getActiveBinId();
+  try {
+    let binId;
+    if (existingBin) {
+      // 기존 bin 갱신 (PUT)
+      const res = await fetch(`${JSONBIN_BASE}/b/${existingBin}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_KEY },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error('update failed ' + res.status);
+      binId = existingBin;
+    } else {
+      // 새 bin 생성 (POST)
+      const res = await fetch(`${JSONBIN_BASE}/b`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_KEY, 'X-Bin-Private': 'false' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error('create failed ' + res.status);
+      const data = await res.json();
+      binId = data.metadata.id;
+      DB.cloudBinId = binId;
+      saveDB();
+    }
+    cloudShowCode(binId);
+  } catch (e) {
+    console.error(e);
+    toast('업로드 실패: 네트워크 또는 키를 확인해 주세요', true);
+  }
+}
+
+async function cloudDownload() {
+  if (JSONBIN_KEY.includes('REPLACE_WITH')) {
+    toast('JSONBin 키가 설정되지 않았어요. 안내를 확인해 주세요.', true);
+    return;
+  }
+  const code = (prompt('공유 코드(클라우드 코드)를 입력하세요:') || '').trim();
+  if (!code) return;
+  confirmModal('데이터 받기', '클라우드의 데이터를 받아오면 현재 이 행사의 데이터가 덮어쓰여집니다. 계속할까요?', async () => {
+    toast('받아오는 중…');
+    try {
+      const res = await fetch(`${JSONBIN_BASE}/b/${code}/latest`, {
+        headers: { 'X-Master-Key': JSONBIN_KEY },
+      });
+      if (!res.ok) throw new Error('fetch failed ' + res.status);
+      const data = await res.json();
+      const record = data.record;
+      if (!record || record.type !== 'retreat-event' || !record.event) {
+        toast('올바른 수양회 데이터가 아니에요', true); return;
+      }
+      const incoming = record.event;
+      incoming.cloudBinId = code; // 같은 코드로 계속 동기화되도록
+      incoming.id = DB.id;        // 현재 활성 행사 자리에 덮어쓰기
+      // VAULT의 활성 행사 교체
+      const idx = VAULT.events.findIndex(e => e.id === VAULT.activeId);
+      if (idx >= 0) VAULT.events[idx] = incoming;
+      DB = incoming;
+      hydrateEvent(DB);
+      saveVault();
+      render();
+      toast('클라우드 데이터를 받았어요');
+    } catch (e) {
+      console.error(e);
+      toast('받기 실패: 코드 또는 네트워크를 확인해 주세요', true);
+    }
+  }, '받기');
+}
+
+function cloudShowCode(code) {
+  const binId = code || getActiveBinId();
+  if (!binId) {
+    toast('아직 올린 적이 없어요. 먼저 "클라우드에 올리기"를 눌러 주세요', true);
+    return;
+  }
+  const html = `
+    <div class="notice">이 코드를 다른 기기에서 "코드로 받기"에 입력하면 같은 데이터를 볼 수 있어요.</div>
+    <div class="field">
+      <label>공유 코드</label>
+      <input id="cloudCodeInput" value="${esc(binId)}" readonly style="font-family:monospace;font-size:15px"/>
+    </div>
+    <button class="btn btn-primary btn-block" id="cloudCopyBtn">코드 복사</button>
+  `;
+  openSheet('클라우드 공유 코드', html, null, { hideSave: true });
+  setTimeout(() => {
+    const btn = $('#cloudCopyBtn');
+    if (btn) btn.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(binId);
+        toast('코드가 복사됐어요');
+      } catch {
+        const inp = $('#cloudCodeInput'); inp.select(); document.execCommand('copy');
+        toast('코드가 복사됐어요');
+      }
+    };
+  }, 50);
+}
+
 function shareDataFile() {
   const dataStr = JSON.stringify(DB);
   const blob = new Blob([dataStr], {type: 'application/json'});
@@ -2080,7 +2191,22 @@ function renderMore() {
       </div>
     </div>
     <div class="card">
-      <div class="card-head"><div class="card-title">행사 기초 설정</div></div>
+      <div class="card-head"><div class="card-title">클라우드 동기화 (JSONBin)</div></div>
+      <div class="menu-list">
+        <button class="menu-item" onclick="cloudUpload()">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 16l-4-4-4 4"/><path d="M12 12v9"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg></div>
+          <div class="lb"><div class="t">클라우드에 올리기</div><div class="d">현재 행사를 클라우드에 저장하고 공유 코드 발급</div></div>
+        </button>
+        <button class="menu-item" onclick="cloudDownload()">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 12l4 4 4-4"/><path d="M12 16V7"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg></div>
+          <div class="lb"><div class="t">코드로 받기</div><div class="d">공유 코드를 입력해 다른 기기의 데이터 불러오기</div></div>
+        </button>
+        <button class="menu-item" onclick="cloudShowCode()">
+          <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></div>
+          <div class="lb"><div class="t">현재 공유 코드 보기 / 복사</div><div class="d">이 행사의 클라우드 코드를 확인합니다</div></div>
+        </button>
+      </div>
+    </div>
       <div class="menu-list">
         <button class="menu-item" data-action="edit-meta">
           <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
